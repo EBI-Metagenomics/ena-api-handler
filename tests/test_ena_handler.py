@@ -36,8 +36,7 @@ class TestEnaHandler(object):
                              ({'primary_accession': 'PRJEB1787'},
                               {'secondary_accession': 'ERP001736'},
                               {'primary_accession': 'PRJEB1787',
-                               'secondary_accession': 'ERP001736'},
-                              {'secondary_accession': 'ERP113040'}))
+                               'secondary_accession': 'ERP001736'}))
     def test_get_study_from_accessions_should_retrieve_default_fields(self, accession_arg):
         """
             This will iterate over all cases above. It will test each accession
@@ -211,11 +210,11 @@ class TestEnaHandler(object):
 
     def test_get_study_runs_should_not_return_amplicons(self):
         ena = ena_handler.EnaApiHandler()
-        assert len([r['run_accession'] for r in ena.get_study_runs('SRP118880')]) == 10
+        assert len([r['run_accession'] for r in ena.get_study_runs('ERP001506')]) == 18
 
     def test_get_study_runs_should_return_all_accessions_including_amplicon(self):
         ena = ena_handler.EnaApiHandler()
-        assert len([r['run_accession'] for r in ena.get_study_runs('SRP118880', filter_assembly_runs=False)]) == 390
+        assert len([r['run_accession'] for r in ena.get_study_runs('ERP001506', filter_assembly_runs=False)]) == 24
 
     def test_get_study_assembly_accessions_should_return_all_accessions(self):
         ena = ena_handler.EnaApiHandler()
