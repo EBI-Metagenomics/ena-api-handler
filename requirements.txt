@@ -1,0 +1,3 @@
+ruamel.yaml~=0.15
+requests>=2.20.0
+emg-backlog-schema>=0.8.2

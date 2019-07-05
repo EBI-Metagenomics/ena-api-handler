@@ -1,0 +1,16 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+
+install:
+  # Test dependencies
+  - pip install 'pytest==3.7.4'
+  - pip install -U  .
+
+script:
+  - python setup.py test
+
+after_success:
+  - pip install codacy-coverage
+  - python-codacy-coverage -r coverage.xml
