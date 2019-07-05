@@ -1,3 +1,4 @@
+import unittest
 from unittest import mock
 
 import pytest
@@ -190,6 +191,7 @@ class TestEnaHandler(object):
         with pytest.raises(ValueError):
             ena.get_assembly('Invalid_accession')
 
+    @unittest.skipIf("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", "Skipping this test on Travis CI.")
     def test_download_runs(self, tmpdir):
         tmpdir = tmpdir.strpath
         current_dir = os.getcwd()
