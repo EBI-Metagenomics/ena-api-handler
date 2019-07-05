@@ -5,11 +5,11 @@ python:
 
 install:
   # Test dependencies
-  - pip install 'pytest==3.7.4'
+  - pip install -r requirements-test.txt
   - pip install -U  .
 
 script:
-  - python setup.py test
+  - pytest --reruns 3 --reruns-delay 1
 
 after_success:
   - pip install codacy-coverage
