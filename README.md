@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/EBI-Metagenomics/ena-api-handler.svg?branch=master)](https://travis-ci.org/EBI-Metagenomics/ena-api-handler)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/b2c48cc9e87c48e8aa28ed9062387643)](https://www.codacy.com/app/mb1069/ena-api-handler?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=EBI-Metagenomics/ena-api-handler&amp;utm_campaign=Badge_Grade)
 
 # ena-api-handler
 This repository contains internal tools and libs used by the MGnify team at EMBL-EBI.
