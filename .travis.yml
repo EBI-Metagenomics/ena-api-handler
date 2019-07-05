@@ -9,7 +9,7 @@ install:
   - pip install -U  .
 
 script:
-  - pytest --reruns 3 --reruns-delay 1
+  - pytest --reruns 3 --reruns-delay 1 -s -vv
 
 after_success:
   - pip install codacy-coverage
