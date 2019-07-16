@@ -67,10 +67,9 @@ RETRY_COUNT = 5
 
 
 class EnaApiHandler:
-    url = ENA_API_URL
 
     def __init__(self):
-        self.url = "https://www.ebi.ac.uk/ena/portal/api/search"
+        self.url = ENA_API_URL
         if 'ENA_API_USER' in os.environ and 'ENA_API_PASSWORD' in os.environ:
             self.auth = (os.environ['ENA_API_USER'], os.environ['ENA_API_PASSWORD'])
         else:
