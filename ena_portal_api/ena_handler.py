@@ -340,11 +340,12 @@ class EnaApiHandler:
 
         return assemblies
 
-    def get_assembly(self, assembly_name, fields=None):
+    def get_assembly(self, assembly_name, fields=None, data_portal='metagenome', retry=True):
         data = get_default_params()
         data['result'] = 'analysis'
         data['fields'] = fields or ASSEMBLY_DEFAULT_FIELDS
         data['query'] = 'analysis_accession=\"{}\"'.format(assembly_name)
+        data['dataPortal'] = data_portal
 
         response = self.post_request(data)
         if str(response.status_code)[0] != '2':
@@ -352,7 +353,9 @@ class EnaApiHandler:
                 'Error retrieving assembly {}, response code: {}'.format(assembly_name, response.status_code))
             logging.debug('Response: {}'.format(response.text))
             raise ValueError('Could not retrieve assembly %s.', assembly_name)
-
+        elif retry and response.status_code == 204:
+            new_portal = 'ena' if data_portal == 'metagenome' else 'metagenome'
+            return self.get_assembly(assembly_name, fields, new_portal, retry=False)
         try:
             assembly = json.loads(response.text)[0]
         except (IndexError, TypeError, ValueError):
