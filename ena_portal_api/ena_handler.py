@@ -28,6 +28,15 @@ ENA_API_URL = os.environ.get('ENA_API_URL', "https://www.ebi.ac.uk/ena/portal/ap
 STUDY_DEFAULT_FIELDS = 'study_accession,secondary_study_accession,description,study_alias,study_title,' \
                        'tax_id,scientific_name,center_name,first_public'
 
+SAMPLE_DEFAULT_FIELDS = 'sample_accession,secondary_sample_accession,sample_alias,description,tax_id,scientific_name,' \
+                        'host_tax_id,host_status,host_sex,submitted_host_sex,' \
+                        'host_body_site,host_gravidity,host_genotype,host_phenotype,host_growth_conditions,' \
+                        'collection_date,collected_by,country,location,depth,altitude,elevation,' \
+                        'first_public,checklist,center_name,broker_name,environmental_package,' \
+                        'investigation_type,experimental_factor,environment_biome,environment_feature,' \
+                        'environment_material,temperature,salinity,ph,sample_collection,project_name,' \
+                        'target_gene,sequencing_method,sample_title,status_id,host_scientific_name'
+
 RUN_DEFAULT_FIELDS = 'study_accession,secondary_study_accession,run_accession,library_source,library_strategy,' \
                      'library_layout,fastq_ftp,fastq_md5,base_count,read_count,instrument_platform,instrument_model,' \
                      'secondary_sample_accession,library_name,sample_alias,sample_title,sample_description'
@@ -125,6 +134,8 @@ class EnaApiHandler:
                     search_params['fields'] = fields
                 elif data['dataPortal'] == 'ena':
                     search_params['dataPortal'] = 'metagenome'
+                elif data['dataPortal'] == 'metagenome':
+                    search_params['dataPortal'] = 'ena'
                 else:
                     raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession,
                                                                                  secondary_accession))
@@ -157,6 +168,50 @@ class EnaApiHandler:
         if 'study_name' in data:
             data['study_alias'] = data.pop('study_name')
         return data
+
+    def get_sample(self, sample_accession, fields=None, search_params=None, attempt=0):
+        data = get_default_params()
+        data['result'] = 'sample'
+        data['fields'] = fields or SAMPLE_DEFAULT_FIELDS
+        data['query'] = '(sample_accession=\"{acc}\" OR secondary_sample_accession=\"{acc}\") '.format(acc=sample_accession)
+
+        if search_params:
+            data.update(search_params)
+
+        response = self.post_request(data)
+        if response.status_code == 200:
+            return json.loads(response.text)[0]
+        else:
+            print(response.__dict__)
+            if str(response.status_code)[0] != '2':
+                logging.debug('Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
+                logging.debug('Response: {}'.format(response.text))
+                raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
+            elif response.status_code == 204:
+                if attempt < 2:
+                    new_params = {'dataPortal': 'metagenome' if data['dataPortal'] == 'ena' else 'ena'}
+                    attempt += 1
+                    return self.get_sample(sample_accession, fields=fields, search_params=new_params, attempt=attempt)
+                else:
+                    print(response.__dict__)
+                    raise ValueError('Could not find sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+
+    def get_sample_studies(self, primary_sample_accession):
+        data = get_default_params()
+        data['result'] = 'read_run'
+        data['fields'] = 'secondary_study_accession'
+        data['query'] = 'sample_accession=\"{acc}\"'.format(acc=primary_sample_accession)
+
+        response = self.post_request(data)
+        if str(response.status_code)[0] != '2':
+            logging.debug(
+                'Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
+            logging.debug('Response: {}'.format(response.text))
+            raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
+        elif response.status_code == 204:
+            raise ValueError('Could not find study for sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+        else:
+            return {s['secondary_study_accession'] for s in json.loads(response.text)}
 
     def get_run(self, run_accession, fields=None, public=True, attempt=0, search_params=None):
         data = get_default_params()
@@ -255,8 +310,9 @@ class EnaApiHandler:
 
     # Specific fo
     def get_study_assemblies(self, study_accession, fields=None, filter_accessions=None,
-                             allow_non_primary_assembly=False):
+                             allow_non_primary_assembly=False, data_portal='metagenome', retry=True):
         data = get_default_params()
+        data['dataPortal'] = data_portal
         data['result'] = 'analysis'
         data['fields'] = fields or ASSEMBLY_DEFAULT_FIELDS
         query = '(study_accession=\"{study_accession}\" ' \
@@ -272,18 +328,24 @@ class EnaApiHandler:
             logging.debug('Response: {}'.format(response.text))
             raise ValueError('Could not retrieve assemblies for study %s.', study_accession)
         elif response.status_code == 204:
-            return []
+            if retry:
+                new_portal = 'ena' if data_portal == 'metagenome' else 'ena'
+                return self.get_study_assemblies(study_accession, fields, filter_accessions,
+                                                 allow_non_primary_assembly, new_portal, retry=False)
+            else:
+                return []
         assemblies = json.loads(response.text)
         if filter_accessions:
             assemblies = list(filter(lambda r: r['analysis_accession'] in filter_accessions, assemblies))
 
         return assemblies
 
-    def get_assembly(self, assembly_name, fields=None):
+    def get_assembly(self, assembly_name, fields=None, data_portal='metagenome', retry=True):
         data = get_default_params()
         data['result'] = 'analysis'
         data['fields'] = fields or ASSEMBLY_DEFAULT_FIELDS
         data['query'] = 'analysis_accession=\"{}\"'.format(assembly_name)
+        data['dataPortal'] = data_portal
 
         response = self.post_request(data)
         if str(response.status_code)[0] != '2':
@@ -291,7 +353,9 @@ class EnaApiHandler:
                 'Error retrieving assembly {}, response code: {}'.format(assembly_name, response.status_code))
             logging.debug('Response: {}'.format(response.text))
             raise ValueError('Could not retrieve assembly %s.', assembly_name)
-
+        elif retry and response.status_code == 204:
+            new_portal = 'ena' if data_portal == 'metagenome' else 'metagenome'
+            return self.get_assembly(assembly_name, fields, new_portal, retry=False)
         try:
             assembly = json.loads(response.text)[0]
         except (IndexError, TypeError, ValueError):
