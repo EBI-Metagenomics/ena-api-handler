@@ -91,7 +91,7 @@ class EnaApiHandler:
         if self.auth:
             response = requests.post(self.url, data=data, auth=self.auth, **get_default_connection_headers())
         else:
-            logging.warning('Not authenticated')
+            logging.warning('Not authenticated, set env vars ENA_API_USER and ENA_API_PASSWORD to access private data.')
             response = requests.post(self.url, data=data, **get_default_connection_headers())
         return response
 
@@ -126,9 +126,11 @@ class EnaApiHandler:
             try:
                 return self._get_study(param)
             except NoDataException:
+                logging.info('No info found to fetch study with params {}'.format(param))
+
                 pass
             except (IndexError, TypeError, ValueError, KeyError):
-                logging.debug('Failed to fetch study with params {}'.format(param))
+                logging.info('Failed to fetch study with params {}'.format(param))
 
         raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession, secondary_accession))
 
@@ -487,10 +489,6 @@ def fetch_url(entry):
                     f.write(chunk)
     return path
 
-# if __name__ == '__main__':
-#     ena = EnaApiHandler()
-#     for acc in ['ERP001736', 'ERP116269', 'ERP116240', 'ERP116272', 'ERP116270', 'ERP116262', 'ERP116264']:
-#         try:
-#             print(ena.get_study(acc))
-#         except Exception:
-#             pass
+if __name__ == '__main__':
+    ena = EnaApiHandler()
+    print(ena.get_study(secondary_accession='ERP116269'))
