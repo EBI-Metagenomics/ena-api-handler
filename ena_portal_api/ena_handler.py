@@ -75,8 +75,11 @@ def run_filter(d):
 RETRY_COUNT = 5
 
 
-class EnaApiHandler:
+class NoDataException(ValueError):
+    pass
 
+
+class EnaApiHandler:
     def __init__(self):
         self.url = ENA_API_URL
         if 'ENA_API_USER' in os.environ and 'ENA_API_PASSWORD' in os.environ:
@@ -93,7 +96,7 @@ class EnaApiHandler:
         return response
 
     # Supports ENA primary and secondary study accessions
-    def get_study(self, primary_accession=None, secondary_accession=None, fields=None, attempt=0, search_params=None):
+    def get_study(self, primary_accession=None, secondary_accession=None, fields=None, attempt=0):
         data = get_default_params()
         data['result'] = 'read_study'
         data['fields'] = fields or STUDY_DEFAULT_FIELDS
@@ -106,59 +109,39 @@ class EnaApiHandler:
             data['query'] = 'study_accession="{}" AND secondary_study_accession="{}"' \
                 .format(primary_accession, secondary_accession)
 
-        if search_params:
-            data.update(search_params)
+        query_params = []
+        for result_type in ['study', 'read_study', 'analysis_study']:
+            for data_portal in ['ena', 'metagenome']:
+                param = data.copy()
+                param['result'] = result_type
+                param['dataPortal'] = data_portal
+                if result_type == 'study':
+                    if 'description' in param['fields']:
+                        param['fields'] = param['fields'].replace('description', 'study_description')
+                    if 'study_alias' in param['fields']:
+                        param['fields'] = param['fields'].replace('study_alias', 'study_name')
+                query_params.append(param)
 
+        for param in query_params:
+            try:
+                return self._get_study(param)
+            except NoDataException:
+                pass
+            except (IndexError, TypeError, ValueError, KeyError):
+                logging.debug('Failed to fetch study with params {}'.format(param))
+
+        raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession, secondary_accession))
+
+    def _get_study(self, data):
         response = self.post_request(data)
-        if str(response.status_code)[0] != '2':
-            logging.debug(data)
-            logging.debug(
-                'Error retrieving study {} {}, response code: {}'.format(primary_accession, secondary_accession,
-                                                                         response.status_code))
-            logging.debug('Response: {}'.format(response.text))
-            raise ValueError('Could not retrieve runs for study %s %s.', primary_accession, secondary_accession)
-        elif response.status_code == 204:
-            if not search_params:
-                search_params = {}
-            if attempt > 1:
-                # Try all other result types
-                if data['result'] == 'read_study':
-                    search_params['result'] = 'analysis_study'
-                elif data['result'] == 'analysis_study':
-                    search_params['result'] = 'study'
-                    fields = data['fields']
-                    if 'description' in data['fields']:
-                        fields = fields.replace('description', 'study_description')
-                    if 'study_alias' in data['fields']:
-                        fields = fields.replace('study_alias', 'study_name')
-                    search_params['fields'] = fields
-                elif data['dataPortal'] == 'ena':
-                    search_params['dataPortal'] = 'metagenome'
-                elif data['dataPortal'] == 'metagenome':
-                    search_params['dataPortal'] = 'ena'
-                else:
-                    raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession,
-                                                                                 secondary_accession))
-                attempt = 0
-            attempt += 1
-            sleep(1)
-            logging.warning(
-                'Error 204 when retrieving study {} {} (options {})'.format(primary_accession,
-                                                                            secondary_accession,
-                                                                            search_params,
-                                                                            attempt))
-            return self.get_study(primary_accession=primary_accession, secondary_accession=secondary_accession,
-                                  fields=fields, attempt=attempt, search_params=search_params)
-
+        if response.status_code == 204:
+            raise NoDataException()
         try:
             study = json.loads(response.text)[0]
         except (IndexError, TypeError, ValueError, KeyError) as e:
-            logging.error(e)
-            logging.error(response.status_code)
-            logging.error(response.text)
-            raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession, secondary_accession))
+            raise e
         if data['result'] == 'study':
-            return self.remap_study_fields(study)
+            study = self.remap_study_fields(study)
         return study
 
     @staticmethod
@@ -173,7 +156,8 @@ class EnaApiHandler:
         data = get_default_params()
         data['result'] = 'sample'
         data['fields'] = fields or SAMPLE_DEFAULT_FIELDS
-        data['query'] = '(sample_accession=\"{acc}\" OR secondary_sample_accession=\"{acc}\") '.format(acc=sample_accession)
+        data['query'] = '(sample_accession=\"{acc}\" OR secondary_sample_accession=\"{acc}\") '.format(
+            acc=sample_accession)
 
         if search_params:
             data.update(search_params)
@@ -182,9 +166,9 @@ class EnaApiHandler:
         if response.status_code == 200:
             return json.loads(response.text)[0]
         else:
-            print(response.__dict__)
             if str(response.status_code)[0] != '2':
-                logging.debug('Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
+                logging.debug(
+                    'Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
                 logging.debug('Response: {}'.format(response.text))
                 raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
             elif response.status_code == 204:
@@ -193,8 +177,8 @@ class EnaApiHandler:
                     attempt += 1
                     return self.get_sample(sample_accession, fields=fields, search_params=new_params, attempt=attempt)
                 else:
-                    print(response.__dict__)
-                    raise ValueError('Could not find sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+                    raise ValueError(
+                        'Could not find sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
 
     def get_sample_studies(self, primary_sample_accession):
         data = get_default_params()
@@ -209,7 +193,8 @@ class EnaApiHandler:
             logging.debug('Response: {}'.format(response.text))
             raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
         elif response.status_code == 204:
-            raise ValueError('Could not find study for sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+            raise ValueError(
+                'Could not find study for sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
         else:
             return {s['secondary_study_accession'] for s in json.loads(response.text)}
 
@@ -501,3 +486,11 @@ def fetch_url(entry):
                 for chunk in r:
                     f.write(chunk)
     return path
+
+# if __name__ == '__main__':
+#     ena = EnaApiHandler()
+#     for acc in ['ERP001736', 'ERP116269', 'ERP116240', 'ERP116272', 'ERP116270', 'ERP116262', 'ERP116264']:
+#         try:
+#             print(ena.get_study(acc))
+#         except Exception:
+#             pass
