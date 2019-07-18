@@ -488,7 +488,3 @@ def fetch_url(entry):
                 for chunk in r:
                     f.write(chunk)
     return path
-
-if __name__ == '__main__':
-    ena = EnaApiHandler()
-    print(ena.get_study(secondary_accession='ERP116269'))
