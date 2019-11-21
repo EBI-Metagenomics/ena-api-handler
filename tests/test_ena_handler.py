@@ -83,7 +83,6 @@ class TestEnaHandler(object):
     def test_get_run_should_retrieve_run_all_fields(self):
         ena = ena_handler.EnaApiHandler()
         run = ena.get_run('ERR1701760')
-        print(run)
         assert isinstance(run, dict)
         assert 19 == len(run)
 
