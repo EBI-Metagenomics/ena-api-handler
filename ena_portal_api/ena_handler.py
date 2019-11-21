@@ -17,11 +17,16 @@
 from __future__ import print_function
 
 import requests
+from requests import Timeout
+from requests.adapters import HTTPAdapter
+
 import json
 import os
 import logging
 from multiprocessing.pool import ThreadPool
 from time import sleep
+
+from urllib3 import Retry
 
 ENA_API_URL = os.environ.get('ENA_API_URL', "https://www.ebi.ac.uk/ena/portal/api/search")
 
@@ -91,7 +96,7 @@ class EnaApiHandler:
         if self.auth:
             response = requests.post(self.url, data=data, auth=self.auth, **get_default_connection_headers())
         else:
-            logging.warning('Not authenticated')
+            logging.warning('Not authenticated, set env vars ENA_API_USER and ENA_API_PASSWORD to access private data.')
             response = requests.post(self.url, data=data, **get_default_connection_headers())
         return response
 
@@ -126,9 +131,11 @@ class EnaApiHandler:
             try:
                 return self._get_study(param)
             except NoDataException:
+                logging.info('No info found to fetch study with params {}'.format(param))
+
                 pass
             except (IndexError, TypeError, ValueError, KeyError):
-                logging.debug('Failed to fetch study with params {}'.format(param))
+                logging.info('Failed to fetch study with params {}'.format(param))
 
         raise ValueError('Could not find study {} {} in ENA.'.format(primary_accession, secondary_accession))
 
@@ -189,12 +196,13 @@ class EnaApiHandler:
         response = self.post_request(data)
         if str(response.status_code)[0] != '2':
             logging.debug(
-                'Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
+                'Error retrieving sample {}, response code: {}'.format(primary_sample_accession, response.status_code))
             logging.debug('Response: {}'.format(response.text))
-            raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
+            raise ValueError('Could not retrieve sample with accession %s.', primary_sample_accession)
         elif response.status_code == 204:
             raise ValueError(
-                'Could not find study for sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+                'Could not find study for sample {} in ENA after {} attempts'.format(primary_sample_accession,
+                                                                                     RETRY_COUNT))
         else:
             return {s['secondary_study_accession'] for s in json.loads(response.text)}
 
@@ -348,17 +356,37 @@ class EnaApiHandler:
 
         return assembly
 
-    # def get_study_assembly_accessions(self, study_prim_acc):
-    #     try:
-    #         return [assembly['analysis_accession'] for assembly in
-    #                 self.get_study_assemblies(study_prim_acc, 'analysis_accession')]
-    #     except ValueError:
-    #         return []
+    @staticmethod
+    def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None):
+        session = session or requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
 
     def get_run_raw_size(self, run, field='fastq_ftp'):
+        # FIXME; There must be a much better way of retrieve file sizes from the ENA. Investigate!
         urls = run[field].split(';')
-        return sum(
-            [int(requests.head('http://' + url, auth=self.auth).headers.get('content-length') or 0) for url in urls])
+        try:
+            total = 0
+            for url in urls:
+                response = self.requests_retry_session().head('http://' + url, auth=self.auth,
+                                                              timeout=(2, 5)).headers.get(
+                    'content-length')
+                total += response
+            return total
+        except requests.exceptions.ConnectionError:
+            logging.warning("Got connection refused error from ENA's server while retrieving RAW read file size.")
+        except Timeout:
+            logging.warning("Got connection timed out from ENA's server while retrieving RAW read file size.")
+        return 0
 
     def get_updated_studies(self, cutoff_date, fields=None):
         data = get_default_params()
@@ -458,39 +486,26 @@ class EnaApiHandler:
             raise ValueError('Could not find any assemblies in ENA updated after {}'.format(cutoff_date))
         return assemblies
 
+    @staticmethod
+    def flatten(l):
+        return [item for sublist in l for item in sublist]
 
-def flatten(l):
-    return [item for sublist in l for item in sublist]
+    def download_runs(self, runs):
+        urls = self.flatten(r['fastq_ftp'].split(';') for r in runs)
+        download_jobs = [(url, os.path.basename(url)) for url in urls]
+        results = ThreadPool(8).imap_unordered(self.fetch_url, download_jobs)
 
+        for path in results:
+            logging.info('Downloaded file: {}'.format(path))
 
-def download_runs(runs):
-    urls = flatten(r['fastq_ftp'].split(';') for r in runs)
-    download_jobs = [(url, os.path.basename(url)) for url in urls]
-    results = ThreadPool(8).imap_unordered(fetch_url, download_jobs)
-
-    for path in results:
-        logging.info('Downloaded file: {}'.format(path))
-
-
-FNULL = open(os.devnull, 'w')
-
-
-def fetch_url(entry):
-    uri, path = entry
-    if 'ftp://' not in uri and 'http://' not in uri and 'https://' not in uri:
-        uri = 'http://' + uri
-    if not os.path.exists(path):
-        r = requests.get(uri, stream=True)
-        if r.status_code == 200:
-            with open(path, 'wb') as f:
-                for chunk in r:
-                    f.write(chunk)
-    return path
-
-# if __name__ == '__main__':
-#     ena = EnaApiHandler()
-#     for acc in ['ERP001736', 'ERP116269', 'ERP116240', 'ERP116272', 'ERP116270', 'ERP116262', 'ERP116264']:
-#         try:
-#             print(ena.get_study(acc))
-#         except Exception:
-#             pass
+    def fetch_url(self, entry):
+        uri, path = entry
+        if 'ftp://' not in uri and 'http://' not in uri and 'https://' not in uri:
+            uri = 'http://' + uri
+        if not os.path.exists(path):
+            r = self.requests_retry_session().get(uri, stream=True, timeout=(2, 5))
+            if r.status_code == 200:
+                with open(path, 'wb') as f:
+                    for chunk in r:
+                        f.write(chunk)
+        return path
