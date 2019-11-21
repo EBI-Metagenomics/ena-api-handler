@@ -380,7 +380,7 @@ class EnaApiHandler:
                 response = self.requests_retry_session().head('http://' + url, auth=self.auth,
                                                               timeout=(2, 5)).headers.get(
                     'content-length')
-                total += response
+                total += int(response)
             return total
         except requests.exceptions.ConnectionError:
             logging.warning("Got connection refused error from ENA's server while retrieving RAW read file size.")
