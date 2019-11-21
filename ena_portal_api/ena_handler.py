@@ -17,11 +17,16 @@
 from __future__ import print_function
 
 import requests
+from requests import Timeout
+from requests.adapters import HTTPAdapter
+
 import json
 import os
 import logging
 from multiprocessing.pool import ThreadPool
 from time import sleep
+
+from urllib3 import Retry
 
 ENA_API_URL = os.environ.get('ENA_API_URL', "https://www.ebi.ac.uk/ena/portal/api/search")
 
@@ -191,12 +196,13 @@ class EnaApiHandler:
         response = self.post_request(data)
         if str(response.status_code)[0] != '2':
             logging.debug(
-                'Error retrieving sample {}, response code: {}'.format(sample_accession, response.status_code))
+                'Error retrieving sample {}, response code: {}'.format(primary_sample_accession, response.status_code))
             logging.debug('Response: {}'.format(response.text))
-            raise ValueError('Could not retrieve sample with accession %s.', sample_accession)
+            raise ValueError('Could not retrieve sample with accession %s.', primary_sample_accession)
         elif response.status_code == 204:
             raise ValueError(
-                'Could not find study for sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
+                'Could not find study for sample {} in ENA after {} attempts'.format(primary_sample_accession,
+                                                                                     RETRY_COUNT))
         else:
             return {s['secondary_study_accession'] for s in json.loads(response.text)}
 
@@ -350,17 +356,36 @@ class EnaApiHandler:
 
         return assembly
 
-    # def get_study_assembly_accessions(self, study_prim_acc):
-    #     try:
-    #         return [assembly['analysis_accession'] for assembly in
-    #                 self.get_study_assemblies(study_prim_acc, 'analysis_accession')]
-    #     except ValueError:
-    #         return []
+    @staticmethod
+    def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None):
+        session = session or requests.Session()
+        retry = Retry(
+            total=retries,
+            read=retries,
+            connect=retries,
+            backoff_factor=backoff_factor,
+            status_forcelist=status_forcelist,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        return session
 
     def get_run_raw_size(self, run, field='fastq_ftp'):
+        # FIXME; There must be a much better way of retrieve file sizes from the ENA. Investigate!
         urls = run[field].split(';')
-        return sum(
-            [int(requests.head('http://' + url, auth=self.auth).headers.get('content-length') or 0) for url in urls])
+        try:
+            total = 0
+            for url in urls:
+                response = self.requests_retry_session().head('http://' + url, auth=self.auth).headers.get(
+                    'content-length', timeout=(2, 5))
+                total += response
+            return total
+        except requests.exceptions.ConnectionError:
+            logging.warning("Got connection refused error from ENA's server while retrieving RAW read file size.")
+        except Timeout:
+            logging.warning("Got connection timed out from ENA's server while retrieving RAW read file size.")
+        return 0
 
     def get_updated_studies(self, cutoff_date, fields=None):
         data = get_default_params()
