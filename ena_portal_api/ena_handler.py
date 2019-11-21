@@ -377,8 +377,9 @@ class EnaApiHandler:
         try:
             total = 0
             for url in urls:
-                response = self.requests_retry_session().head('http://' + url, auth=self.auth).headers.get(
-                    'content-length', timeout=(2, 5))
+                response = self.requests_retry_session().head('http://' + url, auth=self.auth,
+                                                              timeout=(2, 5)).headers.get(
+                    'content-length')
                 total += response
             return total
         except requests.exceptions.ConnectionError:
@@ -485,31 +486,26 @@ class EnaApiHandler:
             raise ValueError('Could not find any assemblies in ENA updated after {}'.format(cutoff_date))
         return assemblies
 
+    @staticmethod
+    def flatten(l):
+        return [item for sublist in l for item in sublist]
 
-def flatten(l):
-    return [item for sublist in l for item in sublist]
+    def download_runs(self, runs):
+        urls = self.flatten(r['fastq_ftp'].split(';') for r in runs)
+        download_jobs = [(url, os.path.basename(url)) for url in urls]
+        results = ThreadPool(8).imap_unordered(self.fetch_url, download_jobs)
 
+        for path in results:
+            logging.info('Downloaded file: {}'.format(path))
 
-def download_runs(runs):
-    urls = flatten(r['fastq_ftp'].split(';') for r in runs)
-    download_jobs = [(url, os.path.basename(url)) for url in urls]
-    results = ThreadPool(8).imap_unordered(fetch_url, download_jobs)
-
-    for path in results:
-        logging.info('Downloaded file: {}'.format(path))
-
-
-FNULL = open(os.devnull, 'w')
-
-
-def fetch_url(entry):
-    uri, path = entry
-    if 'ftp://' not in uri and 'http://' not in uri and 'https://' not in uri:
-        uri = 'http://' + uri
-    if not os.path.exists(path):
-        r = requests.get(uri, stream=True)
-        if r.status_code == 200:
-            with open(path, 'wb') as f:
-                for chunk in r:
-                    f.write(chunk)
-    return path
+    def fetch_url(self, entry):
+        uri, path = entry
+        if 'ftp://' not in uri and 'http://' not in uri and 'https://' not in uri:
+            uri = 'http://' + uri
+        if not os.path.exists(path):
+            r = self.requests_retry_session().get(uri, stream=True, timeout=(2, 5))
+            if r.status_code == 200:
+                with open(path, 'wb') as f:
+                    for chunk in r:
+                        f.write(chunk)
+        return path
