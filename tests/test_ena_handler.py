@@ -122,7 +122,7 @@ class TestEnaHandler(object):
 
     def test_get_study_runs_should_not_fetch_size_if_private(self):
         ena = ena_handler.EnaApiHandler()
-        runs = ena.get_study_runs('SRP125161', filter_accessions=['SRR6301444'], private=True)
+        runs = ena.get_study_runs('SRP125161', filter_accessions=['SRR6301444'])  # private=True was removed
         assert len(runs) == 1
         for run in runs:
             assert 20 == len(run)
