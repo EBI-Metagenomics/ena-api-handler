@@ -259,7 +259,7 @@ class EnaApiHandler:
                     run[int_param] = -1
         return run
 
-    def get_study_runs(self, study_sec_acc, fields=None, filter_assembly_runs=True, private=False,
+    def get_study_runs(self, study_sec_acc, fields=None, filter_assembly_runs=True,
                        filter_accessions=None, search_params=None):
         data = get_default_params()
         data['result'] = 'read_run'
@@ -286,6 +286,7 @@ class EnaApiHandler:
             runs = list(filter(lambda r: r['run_accession'] in filter_accessions, runs))
 
         for run in runs:
+            private = run['first_public'] == ''
             if not private and 'fastq_ftp' in run and len(run['fastq_ftp']) > 0:
                 run['raw_data_size'] = self.get_run_raw_size(run)
             elif not private and 'submitted_ftp' in run and len(run['submitted_ftp']) > 0:
