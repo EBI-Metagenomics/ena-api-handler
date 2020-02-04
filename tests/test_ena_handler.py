@@ -20,6 +20,21 @@ class MockResponse:
         return self.data
 
 
+MOCKED_RUNS = [{'sample_accession': 'SAMN06251743', 'study_accession': 'PRJNA362212',
+                'secondary_study_accession': 'SRP125161', 'run_accession': 'SRR6301444',
+                'library_source': 'METAGENOMIC', 'library_strategy': 'WGS',
+                'library_layout': 'PAIRED',
+                'fastq_ftp': 'ftp.sra.ebi.ac.uk/vol1/fastq/SRR630/004/SRR6301444/SRR6301444_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/SRR630/004/SRR6301444/SRR6301444_2.fastq.gz',
+                'fastq_md5': '1b9be155ad5ee224640a75fd8cdddc58;8379e6b1aa9a83bd0a0c3e0349a880de',
+                'base_count': '65506757180', 'read_count': '260375006',
+                'instrument_platform': 'ILLUMINA', 'instrument_model': 'Illumina HiSeq 2500',
+                'secondary_sample_accession': 'SRS2696342', 'library_name': '4484_3-4cm',
+                'sample_alias': 'Metagenome from Guaymas Basin sediment dive 4484 depth 3-4cm',
+                'sample_title': 'Metagenome from Guaymas Basin sediment dive 4484 depth 3-4cm',
+                'sample_description': 'Metagenome from Guaymas Basin sediment dive 4484 depth 3-4cm',
+                'first_public': ''}]
+
+
 class TestEnaHandler(object):
     @mock.patch.dict(os.environ, {'ENA_API_USER': 'username', 'ENA_API_PASSWORD': 'password'})
     def test_authentication_set(self):
@@ -120,9 +135,16 @@ class TestEnaHandler(object):
             assert 20 == len(run)
             assert isinstance(run, dict)
 
-    def test_get_study_runs_should_not_fetch_size_if_private(self):
+    @patch('ena_portal_api.ena_handler.EnaApiHandler.post_request')
+    @patch('ena_portal_api.ena_handler.json.loads')
+    def test_get_study_runs_should_not_fetch_size_if_private(self, mock_json_load, mock_post_request):
         ena = ena_handler.EnaApiHandler()
-        runs = ena.get_study_runs('SRP125161', filter_accessions=['SRR6301444'], private=True)
+        response = requests.Response()
+        response.status_code = 200
+        mock_post_request.return_value = response
+        mock_json_load.return_value = MOCKED_RUNS
+
+        runs = ena.get_study_runs('SRP125161', filter_accessions=['SRR6301444'])  # private=True was removed
         assert len(runs) == 1
         for run in runs:
             assert 20 == len(run)
