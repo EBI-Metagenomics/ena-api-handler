@@ -43,7 +43,7 @@ SAMPLE_DEFAULT_FIELDS = 'sample_accession,secondary_sample_accession,sample_alia
                         'target_gene,sequencing_method,sample_title,status_id,host_scientific_name'
 
 RUN_DEFAULT_FIELDS = 'study_accession,secondary_study_accession,run_accession,library_source,library_strategy,' \
-                     'library_layout,fastq_ftp,fastq_md5,base_count,read_count,instrument_platform,instrument_model,' \
+                     'library_layout,fastq_ftp,fastq_md5,fastq_bytes,base_count,read_count,instrument_platform,instrument_model,' \
                      'secondary_sample_accession,library_name,sample_alias,sample_title,sample_description,first_public'
 
 ASSEMBLY_DEFAULT_FIELDS = 'analysis_accession,study_accession,secondary_study_accession,sample_accession,' \
@@ -216,6 +216,7 @@ class EnaApiHandler:
             data.update(search_params)
 
         response = self.post_request(data)
+
         if str(response.status_code)[0] != '2':
             logging.debug('Error retrieving run {}, response code: {}'.format(run_accession, response.status_code))
             logging.debug('Response: {}'.format(response.text))
@@ -242,7 +243,7 @@ class EnaApiHandler:
             raise ValueError('Could not find run {} in ENA.'.format(run_accession))
 
         if fields is None or 'raw_data_size' in fields:
-            if public and 'fastq_ftp' in run and len(run['fastq_ftp']) > 0:
+            if public and 'fastq_ftp' in run and len(run['fastq_ftp']):
                 run['raw_data_size'] = self.get_run_raw_size(run)
             elif public and 'submitted_ftp' in run and len(run['submitted_ftp']) > 0:
                 run['raw_data_size'] = self.get_run_raw_size(run, 'submitted_ftp')
@@ -373,20 +374,13 @@ class EnaApiHandler:
         return session
 
     def get_run_raw_size(self, run, field='fastq_ftp'):
-        # FIXME; There must be a much better way of retrieve file sizes from the ENA. Investigate!
-        urls = run[field].split(';')
-        try:
-            total = 0
-            for url in urls:
-                response = self.requests_retry_session().head('http://' + url, auth=self.auth,
-                                                              timeout=(2, 5)).headers.get(
-                    'content-length')
-                total += int(response)
-            return total
-        except requests.exceptions.ConnectionError:
-            logging.warning("Got connection refused error from ENA's server while retrieving RAW read file size.")
-        except Timeout:
-            logging.warning("Got connection timed out from ENA's server while retrieving RAW read file size.")
+        """Sum the values of fastq_bytes or submitted_bytes.
+        """
+        if 'fastq_bytes' in run:
+            return sum([int(s) for s in run['fastq_bytes'].split(';')])
+        if 'submitted_bytes' in run:
+            return sum([int(s) for s in run['submitted_bytes'].split(';')])
+        logging.warning("Cannot get the RAW read file size.")
         return 0
 
     def get_updated_studies(self, cutoff_date, fields=None):
