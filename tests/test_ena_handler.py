@@ -99,7 +99,7 @@ class TestEnaHandler(object):
         ena = ena_handler.EnaApiHandler()
         run = ena.get_run('ERR1701760')
         assert isinstance(run, dict)
-        assert 20 == len(run)
+        assert 21 == len(run)
 
     def test_get_run_should_retrieve_run_filtered_fields(self):
         ena = ena_handler.EnaApiHandler()
@@ -124,7 +124,7 @@ class TestEnaHandler(object):
         runs = ena.get_study_runs('SRP125161')
         assert len(runs) == 4
         for run in runs:
-            assert 20 == len(run)
+            assert 21 == len(run)
             assert isinstance(run, dict)
 
     def test_get_study_runs_should_have_filter_run_accessions(self):
@@ -132,7 +132,7 @@ class TestEnaHandler(object):
         runs = ena.get_study_runs('SRP125161', filter_accessions=['SRR6301444'])
         assert len(runs) == 1
         for run in runs:
-            assert 20 == len(run)
+            assert 21 == len(run)
             assert isinstance(run, dict)
 
     @patch('ena_portal_api.ena_handler.EnaApiHandler.post_request')
