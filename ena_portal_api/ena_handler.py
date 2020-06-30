@@ -187,9 +187,9 @@ class EnaApiHandler:
                     raise ValueError(
                         'Could not find sample {} in ENA after {} attempts'.format(sample_accession, RETRY_COUNT))
 
-    def get_sample_studies(self, primary_sample_accession):
+    def get_sample_studies(self, primary_sample_accession, result='read_run'):
         data = get_default_params()
-        data['result'] = 'read_run'
+        data['result'] = result
         data['fields'] = 'secondary_study_accession'
         data['query'] = 'sample_accession=\"{acc}\"'.format(acc=primary_sample_accession)
 
