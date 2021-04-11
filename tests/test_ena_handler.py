@@ -19,6 +19,10 @@ class MockResponse:
     def json(self):
         return self.data
 
+    @property
+    def ok(self):
+        return self.status_code < 400
+
 
 MOCKED_RUNS = [{'sample_accession': 'SAMN06251743', 'study_accession': 'PRJNA362212',
                 'secondary_study_accession': 'SRP125161', 'run_accession': 'SRR6301444',
@@ -165,7 +169,7 @@ class TestEnaHandler(object):
         ena = ena_handler.EnaApiHandler()
         assemblies = ena.get_study_assemblies('ERP112609')
         for assembly in assemblies:
-            assert len(assembly) == 28
+            assert len(assembly) == 35
             assert isinstance(assembly, dict)
 
     def test_get_study_assemblies_should_filter_fields(self):
@@ -179,7 +183,7 @@ class TestEnaHandler(object):
         ena = ena_handler.EnaApiHandler()
         assemblies = ena.get_study_assemblies('ERP112609', filter_accessions=['GCA_001751075'])
         for assembly in assemblies:
-            assert len(assembly) == 28
+            assert len(assembly) == 35
             assert isinstance(assembly, dict)
 
     def test_get_study_assemblies_invalid_accession(self):
@@ -195,7 +199,7 @@ class TestEnaHandler(object):
     def test_get_assembly_should_have_all_fields(self):
         ena = ena_handler.EnaApiHandler()
         assembly = ena.get_assembly('ERZ795049')
-        assert len(assembly) == 28
+        assert len(assembly) == 35
         assert isinstance(assembly, dict)
 
     def test_get_assembly_should_filter_fields(self):

@@ -30,28 +30,128 @@ from urllib3 import Retry
 
 ENA_API_URL = os.environ.get('ENA_API_URL', "https://www.ebi.ac.uk/ena/portal/api/search")
 
-STUDY_DEFAULT_FIELDS = 'study_accession,secondary_study_accession,description,study_alias,study_title,' \
-                       'tax_id,scientific_name,center_name,first_public'
+RETRY_COUNT = 5
 
-SAMPLE_DEFAULT_FIELDS = 'sample_accession,secondary_sample_accession,sample_alias,description,tax_id,scientific_name,' \
-                        'host_tax_id,host_status,host_sex,submitted_host_sex,' \
-                        'host_body_site,host_gravidity,host_genotype,host_phenotype,host_growth_conditions,' \
-                        'collection_date,collected_by,country,location,depth,altitude,elevation,' \
-                        'first_public,checklist,center_name,broker_name,environmental_package,' \
-                        'investigation_type,experimental_factor,environment_biome,environment_feature,' \
-                        'environment_material,temperature,salinity,ph,sample_collection,project_name,' \
-                        'target_gene,sequencing_method,sample_title,status_id,host_scientific_name'
+STUDY_DEFAULT_FIELDS = ",".join([
+    "study_accession",
+    "secondary_study_accession",
+    "description",
+    "study_alias",
+    "study_title",
+    "tax_id",
+    "scientific_name",
+    "center_name",
+    "first_public",
+])
 
-RUN_DEFAULT_FIELDS = 'study_accession,secondary_study_accession,run_accession,library_source,library_strategy,' \
-                     'library_layout,fastq_ftp,fastq_md5,fastq_bytes,base_count,read_count,instrument_platform,instrument_model,' \
-                     'secondary_sample_accession,library_name,sample_alias,sample_title,sample_description,first_public'
+SAMPLE_DEFAULT_FIELDS = ",".join([
+    "sample_accession",
+    "secondary_sample_accession",
+    "sample_alias",
+    "description",
+    "tax_id",
+    "scientific_name",
+    "host_tax_id",
+    "host_status",
+    "host_sex",
+    "submitted_host_sex",
+    "host_body_site",
+    "host_gravidity",
+    "host_genotype",
+    "host_phenotype",
+    "host_growth_conditions",
+    "collection_date",
+    "collected_by",
+    "country",
+    "location",
+    "depth",
+    "altitude",
+    "elevation",
+    "first_public",
+    "checklist",
+    "center_name",
+    "broker_name",
+    "environmental_package",
+    "investigation_type",
+    "experimental_factor",
+    "environment_biome",
+    "environment_feature",
+    "environment_material",
+    "temperature",
+    "salinity",
+    "ph",
+    "sample_collection",
+    "project_name",
+    "target_gene",
+    "sequencing_method",
+    "sample_title",
+    "status_id",
+    "host_scientific_name",
+])
 
-ASSEMBLY_DEFAULT_FIELDS = 'analysis_accession,study_accession,secondary_study_accession,sample_accession,' \
-                          'secondary_sample_accession,analysis_title,analysis_type,center_name,first_public,' \
-                          'last_updated,study_title,description,tax_id,scientific_name,analysis_alias,study_alias,' \
-                          'submitted_bytes,submitted_md5,submitted_ftp,submitted_aspera,submitted_galaxy,' \
-                          'sample_alias,broker_name,sample_title,sample_description,pipeline_name,' \
-                          'pipeline_version,assembly_type,description'
+RUN_DEFAULT_FIELDS = ",".join([
+    "study_accession"
+    ,"secondary_study_accession"
+    ,"run_accession"
+    ,"library_source"
+    ,"library_strategy"
+    ,"library_layout"
+    ,"fastq_ftp"
+    ,"fastq_md5"
+    ,"fastq_bytes"
+    ,"base_count"
+    ,"read_count"
+    ,"instrument_platform"
+    ,"instrument_model"
+    ,"secondary_sample_accession"
+    ,"library_name"
+    ,"sample_alias"
+    ,"sample_title"
+    ,"sample_description"
+    ,"first_public",
+])
+
+# To get the possible fields:
+# https://www.ebi.ac.uk/ena/portal/api/returnFields?result=analysis&dataPortal=metagenome
+# https://www.ebi.ac.uk/ena/portal/api/returnFields?result=analysis&dataPortal=ena
+ASSEMBLY_DEFAULT_FIELDS = ",".join([
+    "analysis_accession",
+    "analysis_alias",
+    "analysis_title",
+    "analysis_type",
+    "assembly_type",
+    "broker_name",
+    "center_name",
+    "description",
+    "description",
+    "first_public",
+    "last_updated",
+    "pipeline_name",
+    "pipeline_version",
+    "sample_accession",
+    "sample_alias",
+    "sample_description",
+    "sample_title",
+    "scientific_name",
+    "secondary_sample_accession",
+    "secondary_study_accession",
+    "study_accession",
+    "study_alias",
+    "study_title",
+    "submitted_aspera",
+    "submitted_bytes",
+    "submitted_ftp",
+    "submitted_galaxy",
+    "submitted_md5",
+    "tax_id",
+    "sequencing_method", # Sequencing method used
+    "assembly_quality",	# Quality of assembly
+    "assembly_software", # Assembly software
+    "taxonomic_classification", # Taxonomic classification
+    "completeness_score", # Completeness score (%)
+    "contamination_score",  # Contamination score (%)
+    "binning_software", # Binning software
+])
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.INFO)
 
@@ -75,9 +175,6 @@ def get_default_params():
 
 def run_filter(d):
     return d['library_strategy'] != 'AMPLICON'
-
-
-RETRY_COUNT = 5
 
 
 class NoDataException(ValueError):
@@ -303,20 +400,27 @@ class EnaApiHandler:
                         run[int_param] = None
         return runs
 
-    # Specific fo
     def get_study_assemblies(self, study_accession, fields=None, filter_accessions=None,
                              allow_non_primary_assembly=False, data_portal='metagenome', retry=True):
         data = get_default_params()
         data['dataPortal'] = data_portal
         data['result'] = 'analysis'
         data['fields'] = fields or ASSEMBLY_DEFAULT_FIELDS
-        query = '(study_accession=\"{study_accession}\" ' \
-                'OR secondary_study_accession=\"{study_accession}\") '.format(study_accession=study_accession)
+
+        query = "("
+        query += "study_accession=\"{study_accession}\"".format(study_accession=study_accession)
+        query += " OR "
+        query += "secondary_study_accession=\"{study_accession}\"".format(study_accession=study_accession)
+        query += ")"
+
         if not allow_non_primary_assembly:
-            query += ' AND assembly_type=\"primary metagenome\"'
+            query += " AND assembly_type=\"primary metagenome\""
+
         data['query'] = query
+
         response = self.post_request(data)
-        if str(response.status_code)[0] != '2':
+
+        if not response.ok:
             logging.debug(
                 'Error retrieving study assemblies {}, response code: {}'.format(study_accession,
                                                                                  response.status_code))
@@ -329,7 +433,9 @@ class EnaApiHandler:
                                                  allow_non_primary_assembly, new_portal, retry=False)
             else:
                 return []
+
         assemblies = json.loads(response.text)
+        
         if filter_accessions:
             assemblies = list(filter(lambda r: r['analysis_accession'] in filter_accessions, assemblies))
 
