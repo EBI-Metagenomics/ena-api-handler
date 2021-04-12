@@ -123,7 +123,6 @@ ASSEMBLY_DEFAULT_FIELDS = ",".join([
     "broker_name",
     "center_name",
     "description",
-    "description",
     "first_public",
     "last_updated",
     "pipeline_name",
@@ -449,7 +448,8 @@ class EnaApiHandler:
         data['dataPortal'] = data_portal
 
         response = self.post_request(data)
-        if str(response.status_code)[0] != '2':
+        
+        if not response.ok:
             logging.debug(
                 'Error retrieving assembly {}, response code: {}'.format(assembly_name, response.status_code))
             logging.debug('Response: {}'.format(response.text))
