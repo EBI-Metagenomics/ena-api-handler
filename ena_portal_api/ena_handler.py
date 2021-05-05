@@ -335,6 +335,29 @@ class EnaApiHandler:
 
         return assemblies
 
+    def get_assembly_from_sample(self, sample_name, fields=None, data_portal='metagenome', retry=True):
+        data = get_default_params()
+        data['result'] = 'analysis'
+        data['fields'] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data['query'] = 'sample_accession=\"{}\"'.format(sample_name)
+        data['dataPortal'] = data_portal
+
+        response = self.post_request(data)
+        if str(response.status_code)[0] != '2':
+            logging.debug(
+                'Error retrieving assembly {}, response code: {}'.format(assembly_name, response.status_code))
+            logging.debug('Response: {}'.format(response.text))
+            raise ValueError('Could not retrieve assembly %s.', assembly_name)
+        elif retry and response.status_code == 204:
+            new_portal = 'ena' if data_portal == 'metagenome' else 'metagenome'
+            return self.get_assembly_from_sample(sample_name, fields, new_portal, retry=False)
+        try:
+            assembly = json.loads(response.text)[0]
+        except (IndexError, TypeError, ValueError):
+            raise ValueError('Could not find assembly {} in ENA.'.format(assembly_name))
+
+        return assembly
+
     def get_assembly(self, assembly_name, fields=None, data_portal='metagenome', retry=True):
         data = get_default_params()
         data['result'] = 'analysis'
