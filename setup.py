@@ -14,10 +14,14 @@ install_requirements = []
 with open(_requirements) as f:
     install_requirements = f.read().splitlines()
 
+pytest_runner = []
+
 test_requirements = []
 if "test" in sys.argv:
+    pytest_runner = ['pytest-runner']
     with open(_requirements_test) as f:
         test_requirements = f.read().splitlines()
+
 
 setup(
     name="ena_api_libs",
@@ -29,5 +33,5 @@ setup(
     include_package_data=True,
     tests_require=test_requirements,
     test_suite="tests",
-    setup_requires=['pytest-runner'],
+    setup_requires=pytest_runner,
 )
