@@ -345,16 +345,16 @@ class EnaApiHandler:
         response = self.post_request(data)
         if str(response.status_code)[0] != '2':
             logging.debug(
-                'Error retrieving assembly {}, response code: {}'.format(assembly_name, response.status_code))
+                'Error retrieving assembly of sample {}, response code: {}'.format(sample_name, response.status_code))
             logging.debug('Response: {}'.format(response.text))
-            raise ValueError('Could not retrieve assembly %s.', assembly_name)
+            raise ValueError('Could not retrieve assembly for sample %s.', sample_name)
         elif retry and response.status_code == 204:
             new_portal = 'ena' if data_portal == 'metagenome' else 'metagenome'
             return self.get_assembly_from_sample(sample_name, fields, new_portal, retry=False)
         try:
             assembly = json.loads(response.text)[0]
         except (IndexError, TypeError, ValueError):
-            raise ValueError('Could not find assembly {} in ENA.'.format(assembly_name))
+            raise ValueError('Could not find assembly of sample {} in ENA.'.format(sample_name))
 
         return assembly
 
