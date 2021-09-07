@@ -243,14 +243,14 @@ class TestEnaHandler(object):
 
     def test_get_assembly_should_have_all_fields(self):
         ena = ena_handler.EnaApiHandler()
-        assembly = ena.get_assembly("ERZ795049")
+        assembly = ena.get_assembly("ERZ1669402")
         assert len(assembly) == 35
         assert isinstance(assembly, dict)
 
     def test_get_assembly_should_filter_fields(self):
         ena = ena_handler.EnaApiHandler()
         assembly = ena.get_assembly(
-            "ERZ795049", fields="analysis_accession,study_accession"
+            "ERZ1669402", fields="analysis_accession,study_accession"
         )
         assert len(assembly) == 2
         assert isinstance(assembly, dict)
@@ -318,9 +318,22 @@ class TestEnaHandler(object):
 
     def test_get_study_assembly_accessions_should_return_all_accessions(self):
         ena = ena_handler.EnaApiHandler()
+        expected = set(
+            [
+                "ERZ1669402",
+                "ERZ1669403",
+                "ERZ1669404",
+                "ERZ1669405",
+                "ERZ1669406",
+                "ERZ1669411",
+                "ERZ1669412",
+                "ERZ1669415",
+                "ERZ1669417",
+            ]
+        )
         assert {
-            a["analysis_accession"] for a in ena.get_study_assemblies("ERP112609")
-        } == {"ERZ795049"}
+            a["analysis_accession"] for a in ena.get_study_assemblies("ERP124933")
+        } == expected
 
     def test_get_study_assembly_accessions_should_return_empty_list_if_study_contains_no_assemblies(  # noqa: E501
         self,
