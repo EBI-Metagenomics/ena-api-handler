@@ -1,6 +1,5 @@
-[![Build Status](https://travis-ci.com/EBI-Metagenomics/ena-api-handler.svg?branch=master)](https://travis-ci.com/EBI-Metagenomics/ena-api-handler)
-
 # ena-api-handler
+
 This repository contains internal tools and libs used by the MGnify team at EMBL-EBI.
 
 ## Installation
