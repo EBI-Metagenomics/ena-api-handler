@@ -1,0 +1,5 @@
+-r requirements.txt
+
+black==21.8b0
+flake8==3.9.2
+pre-commit==2.15.0
