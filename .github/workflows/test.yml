@@ -24,7 +24,15 @@ jobs:
       - name: 🧪 - Testing
         run: |
           pytest --reruns 3 --reruns-delay 1 -s -vv
+
+      - name: Coverage
+        uses: codecov/codecov-action@v2
+        run: |
           python-codacy-coverage -r coverage.xml
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
 
       - name: 📮 - Slack Notification
         uses: rtCamp/action-slack-notify@v2
