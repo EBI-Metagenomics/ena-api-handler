@@ -1,0 +1,40 @@
+name: Testing
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.8, 3.9]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: 🐍 - Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 🔧 - Install
+        run: |
+          pip install -r requirements-test.txt
+          pip install -U .
+
+      - name: 🧪 - Testing
+        run: |
+          pytest --reruns 3 --reruns-delay 1 -s -vv
+          python-codacy-coverage -r coverage.xml
+
+      - name: 📮 - Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        continue-on-error: true
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop'
+        env:
+          SLACK_COLOR: "${{ job.status == 'success' && 'good' || 'danger' }}"
+          SLACK_USERNAME: "Github Actions API"
+          SLACK_ICON_EMOJI: ":octocat:"
+          SLACK_TITLE: "CI API results in GitHub Actions"
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: "#metagenomics-notify"
+          MSG_MINIMAL: Actions URL
