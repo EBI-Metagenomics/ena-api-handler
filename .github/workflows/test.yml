@@ -25,10 +25,8 @@ jobs:
         run: |
           pytest --reruns 3 --reruns-delay 1 -s -vv
 
-      - name: Coverage
+      - name: Codecov
         uses: codecov/codecov-action@v2
-        run: |
-          python-codacy-coverage -r coverage.xml
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
