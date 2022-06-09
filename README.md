@@ -1,6 +1,8 @@
-# ena-api-handler
+[![Testing](https://github.com/EBI-Metagenomics/ena-api-handler/actions/workflows/test.yml/badge.svg)](https://github.com/EBI-Metagenomics/ena-api-handler/actions/workflows/test.yml)
 
-This repository contains internal tools and libs used by the MGnify team at EMBL-EBI.
+# ENA API handler
+
+This repository contains an ENA API client, mainly used by the EMBL-EBI MGnify team for the internal automation system.
 
 ## Installation
 
@@ -26,5 +28,5 @@ pre-commit-hooks install
 ## Setting up analysis_request_cli
 
 The following environment vars must be defined:
- * ENA_API_USER: MGnify username for the ENA search Portal
- * ENA_API_PASSWORD: MGnify username for the ENA search Portal
+ * ENA_API_USER: The username for the the ENA search Portal
+ * ENA_API_PASSWORD: The password for the ENA search Portal
