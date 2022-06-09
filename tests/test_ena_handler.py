@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018-2021 EMBL - European Bioinformatics Institute
+# Copyright 2018-2022 EMBL - European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ MOCKED_RUNS = [
 ]
 
 
-class TestEnaHandler(object):
+class TestEnaHandler:
     @mock.patch.dict(
         os.environ, {"ENA_API_USER": "username", "ENA_API_PASSWORD": "password"}
     )
@@ -80,6 +80,13 @@ class TestEnaHandler(object):
         ena = ena_handler.EnaApiHandler()
         assert ena.auth is None
 
+    @mock.patch.dict(
+        os.environ, {"ENA_API_USER": "username", "ENA_API_PASSWORD": "password"}
+    )
+    def test_authentication_set_in_constructor(self):
+        ena = ena_handler.EnaApiHandler(username="username1", password="password1")
+        assert ena.auth == ("username1", "password1")
+
     @pytest.mark.parametrize(
         "accession_arg",
         (
@@ -91,9 +98,8 @@ class TestEnaHandler(object):
     def test_get_study_from_accessions_should_retrieve_default_fields(
         self, accession_arg
     ):
-        """
-            This will iterate over all cases above. It will test each accession
-            type individual and together.
+        """This will iterate over all cases above. It will test each accession
+        type individual and together.
         :param accession_arg:
         :return:
         """

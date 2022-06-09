@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2018-2021 EMBL - European Bioinformatics Institute
+# Copyright 2018-2022 EMBL - European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -183,10 +183,12 @@ class NoDataException(ValueError):
 
 
 class EnaApiHandler:
-    def __init__(self):
+    def __init__(self, username=None, password=None):
         self.url = ENA_API_URL
-        if "ENA_API_USER" in os.environ and "ENA_API_PASSWORD" in os.environ:
-            self.auth = (os.environ["ENA_API_USER"], os.environ["ENA_API_PASSWORD"])
+        username = username or os.environ.get("ENA_API_USER")
+        password = password or os.environ.get("ENA_API_PASSWORD")
+        if username and password:
+            self.auth = (username, password)
         else:
             self.auth = None
 
@@ -202,6 +204,9 @@ class EnaApiHandler:
             response = requests.post(
                 self.url, data=data, **get_default_connection_headers()
             )
+        print(response.request.url)
+        print(response.request.body)
+        print(response.request.headers)
         return response
 
     # Supports ENA primary and secondary study accessions
