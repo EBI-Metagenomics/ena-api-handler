@@ -204,9 +204,6 @@ class EnaApiHandler:
             response = requests.post(
                 self.url, data=data, **get_default_connection_headers()
             )
-        print(response.request.url)
-        print(response.request.body)
-        print(response.request.headers)
         return response
 
     # Supports ENA primary and secondary study accessions
