@@ -71,11 +71,10 @@ class TestEnaHandler:
         ena = ena_handler.EnaApiHandler()
         assert ena.auth == ("username", "password")
 
-    @patch("os.environ")
-    def test_authentication_not_set(self, mocked_class):
-        if os.environ["ENA_API_USER"]:
+    def test_authentication_not_set(self):
+        if "ENA_API_USER" in os.environ:
             del os.environ["ENA_API_USER"]
-        if os.environ["ENA_API_PASSWORD"]:
+        if "ENA_API_PASSWORD" in os.environ:
             del os.environ["ENA_API_PASSWORD"]
         ena = ena_handler.EnaApiHandler()
         assert ena.auth is None

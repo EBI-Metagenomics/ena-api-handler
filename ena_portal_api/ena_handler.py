@@ -185,8 +185,8 @@ class NoDataException(ValueError):
 class EnaApiHandler:
     def __init__(self, username=None, password=None):
         self.url = ENA_API_URL
-        username = username or os.environ.get("ENA_API_USER")
-        password = password or os.environ.get("ENA_API_PASSWORD")
+        username = username or os.getenv("ENA_API_USER")
+        password = password or os.getenv("ENA_API_PASSWORD")
         if username and password:
             self.auth = (username, password)
         else:
