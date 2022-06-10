@@ -112,6 +112,7 @@ RUN_DEFAULT_FIELDS = ",".join(
         "sample_title",
         "sample_description",
         "first_public",
+        "status_id",
     ]
 )
 
