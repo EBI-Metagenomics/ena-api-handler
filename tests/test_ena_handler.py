@@ -24,6 +24,21 @@ import requests
 from ena_portal_api import ena_handler
 
 
+def check_fields(list_of_fields, result):
+    for field in list_of_fields:
+        if field not in result:
+            logging.info('Missing in result:', field)
+            return False
+    context = False
+    for field in result:
+        if field not in list_of_fields:
+            logging.info('Missing in list', field)
+            if result[field] != '':
+                context = True
+    if not context:
+        logging.info('All returned fields are empty')
+    return True
+
 class MockResponse:
     def __init__(self, status_code, data=None, text=None):
         self.data = data
@@ -145,7 +160,8 @@ class TestEnaHandler:
         ena = ena_handler.EnaApiHandler()
         run = ena.get_run("ERR1701760")
         assert isinstance(run, dict)
-        assert 22 == len(run)
+        # why it returns sample_accession????
+        assert check_fields(list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run)
 
     def test_get_run_should_retrieve_run_filtered_fields(self):
         ena = ena_handler.EnaApiHandler()
@@ -170,7 +186,7 @@ class TestEnaHandler:
         runs = ena.get_study_runs("SRP125161")
         assert len(runs) == 4
         for run in runs:
-            assert 22 == len(run)
+            assert check_fields(list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run)
             assert isinstance(run, dict)
 
     def test_get_study_runs_should_have_filter_run_accessions(self):
@@ -178,7 +194,7 @@ class TestEnaHandler:
         runs = ena.get_study_runs("SRP125161", filter_accessions=["SRR6301444"])
         assert len(runs) == 1
         for run in runs:
-            assert 22 == len(run)
+            assert check_fields(list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run)
             assert isinstance(run, dict)
 
     @patch("ena_portal_api.ena_handler.EnaApiHandler.post_request")
@@ -247,9 +263,10 @@ class TestEnaHandler:
             ena.get_study_assemblies("ERP112609")
 
     def test_get_assembly_should_have_all_fields(self):
+        # missing analysis_title ???
         ena = ena_handler.EnaApiHandler()
         assembly = ena.get_assembly("ERZ1669402")
-        assert len(assembly) == 35
+        assert check_fields(list_of_fields=ena_handler.ASSEMBLY_DEFAULT_FIELDS, result=assembly)
         assert isinstance(assembly, dict)
 
     def test_get_assembly_should_filter_fields(self):

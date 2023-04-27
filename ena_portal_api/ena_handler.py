@@ -25,7 +25,7 @@ from requests.adapters import HTTPAdapter
 from urllib3 import Retry
 
 ENA_API_URL = os.environ.get(
-    "ENA_API_URL", "https://www.ebi.ac.uk/ena/portal/api/search"
+    "ENA_API_URL", "https://www.ebi.ac.uk/ena/portal/api/v2.0/search"
 )
 
 RETRY_COUNT = 5
@@ -91,8 +91,8 @@ SAMPLE_DEFAULT_FIELDS = ",".join(
     ]
 )
 
-RUN_DEFAULT_FIELDS = ",".join(
-    [
+# NOTE: status_id is not supported by v2
+RUN_DEFAULT_FIELDS = [
         "study_accession",
         "secondary_study_accession",
         "run_accession",
@@ -112,15 +112,14 @@ RUN_DEFAULT_FIELDS = ",".join(
         "sample_title",
         "sample_description",
         "first_public",
-        "status_id",
     ]
-)
+RUN_DEFAULT_FIELDS_STR = ",".join(RUN_DEFAULT_FIELDS)
+
 
 # To get the possible fields:
-# https://www.ebi.ac.uk/ena/portal/api/returnFields?result=analysis&dataPortal=metagenome
-# https://www.ebi.ac.uk/ena/portal/api/returnFields?result=analysis&dataPortal=ena
-ASSEMBLY_DEFAULT_FIELDS = ",".join(
-    [
+# https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=metagenome
+# https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=ena
+ASSEMBLY_DEFAULT_FIELDS = [
         "analysis_accession",
         "analysis_alias",
         "analysis_title",
@@ -156,8 +155,8 @@ ASSEMBLY_DEFAULT_FIELDS = ",".join(
         "completeness_score",  # Completeness score (%)
         "contamination_score",  # Contamination score (%)
         "binning_software",  # Binning software
-    ]
-)
+]
+ASSEMBLY_DEFAULT_FIELDS_STR = ",".join(ASSEMBLY_DEFAULT_FIELDS)
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.INFO)
 
@@ -166,7 +165,7 @@ def get_default_connection_headers():
     return {
         "headers": {
             "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "*/*",
+            "accept": "*/*",
         }
     }
 
@@ -360,14 +359,13 @@ class EnaApiHandler:
     ):
         data = get_default_params()
         data["result"] = "read_run"
-        data["fields"] = fields or RUN_DEFAULT_FIELDS
+        data["fields"] = fields or RUN_DEFAULT_FIELDS_STR
         data["query"] = 'run_accession="{}"'.format(run_accession)
 
         if search_params:
             data.update(search_params)
 
         response = self.post_request(data)
-
         if str(response.status_code)[0] != "2":
             logging.debug(
                 "Error retrieving run {}, response code: {}".format(
@@ -409,7 +407,6 @@ class EnaApiHandler:
             run = json.loads(response.text)[0]
         except (IndexError, TypeError, ValueError):
             raise ValueError("Could not find run {} in ENA.".format(run_accession))
-
         if fields is None or "raw_data_size" in fields:
             if public and "fastq_ftp" in run and len(run["fastq_ftp"]):
                 run["raw_data_size"] = self.get_run_raw_size(run)
@@ -417,7 +414,6 @@ class EnaApiHandler:
                 run["raw_data_size"] = self.get_run_raw_size(run, "submitted_ftp")
             else:
                 run["raw_data_size"] = None
-
         for int_param in ("read_count", "base_count"):
             if int_param in run:
                 try:
@@ -438,7 +434,7 @@ class EnaApiHandler:
     ):
         data = get_default_params()
         data["result"] = "read_run"
-        data["fields"] = fields or RUN_DEFAULT_FIELDS
+        data["fields"] = fields or RUN_DEFAULT_FIELDS_STR
         data[
             "query"
         ] = '(study_accession="{}" OR secondary_study_accession="{}")'.format(
@@ -498,7 +494,7 @@ class EnaApiHandler:
         data = get_default_params()
         data["dataPortal"] = data_portal
         data["result"] = "analysis"
-        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
 
         query = "("
         query += 'study_accession="{study_accession}"'.format(
@@ -557,7 +553,7 @@ class EnaApiHandler:
     ):
         data = get_default_params()
         data["result"] = "analysis"
-        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
         data["query"] = 'sample_accession="{}"'.format(sample_name)
         data["dataPortal"] = data_portal
 
@@ -589,10 +585,9 @@ class EnaApiHandler:
     ):
         data = get_default_params()
         data["result"] = "analysis"
-        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
         data["query"] = 'analysis_accession="{}"'.format(assembly_name)
         data["dataPortal"] = data_portal
-
         response = self.post_request(data)
 
         if not response.ok:
@@ -672,7 +667,7 @@ class EnaApiHandler:
         data["limit"] = 0
         data["result"] = "read_run"
         data["dataPortal"] = "metagenome"
-        data["fields"] = fields or RUN_DEFAULT_FIELDS
+        data["fields"] = fields or RUN_DEFAULT_FIELDS_STR
         data["query"] = "last_updated>={}".format(cutoff_date)
         response = self.post_request(data)
         status_code = str(response.status_code)
@@ -699,7 +694,7 @@ class EnaApiHandler:
         data["dataPortal"] = "metagenome"
         data["limit"] = 0
         data["result"] = "analysis"
-        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
         data["query"] = 'assembly_type="{}" AND last_updated>={}'.format(
             "primary metagenome", cutoff_date
         )
@@ -734,7 +729,7 @@ class EnaApiHandler:
         data["dataPortal"] = "metagenome"
         data["limit"] = 0
         data["result"] = "assembly"
-        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS
+        data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
         data["query"] = "last_updated>={}".format(cutoff_date)
         response = self.post_request(data)
         status_code = str(response.status_code)
