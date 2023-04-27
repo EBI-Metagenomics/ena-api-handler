@@ -354,9 +354,8 @@ class TestEnaHandler:
                 "ERZ1669417",
             ]
         )
-        assert {
-            a["analysis_accession"] for a in ena.get_study_assemblies("ERP124933")
-        } == expected
+
+        assert check_fields(list_of_fields=expected, result=[a["analysis_accession"] for a in ena.get_study_assemblies("ERP124933")])
 
     def test_get_study_assembly_accessions_should_return_empty_list_if_study_contains_no_assemblies(  # noqa: E501
         self,
