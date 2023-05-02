@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018-2021 EMBL - European Bioinformatics Institute
+# Copyright 2018-2023 EMBL - European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from setuptools import setup
 import os
 import sys
 
-version = "1.2.1"
+version = "2.0.0"
 
 _base = os.path.dirname(os.path.abspath(__file__))
 _requirements = os.path.join(_base, "requirements.txt")
