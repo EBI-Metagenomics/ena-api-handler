@@ -408,12 +408,7 @@ class EnaApiHandler:
         except (IndexError, TypeError, ValueError):
             raise ValueError("Could not find run {} in ENA.".format(run_accession))
         if fields is None or "raw_data_size" in fields:
-            if public and "fastq_ftp" in run and len(run["fastq_ftp"]):
-                run["raw_data_size"] = self.get_run_raw_size(run)
-            elif public and "submitted_ftp" in run and len(run["submitted_ftp"]) > 0:
-                run["raw_data_size"] = self.get_run_raw_size(run, "submitted_ftp")
-            else:
-                run["raw_data_size"] = None
+            run["raw_data_size"] = self.get_run_raw_size(run)
         for int_param in ("read_count", "base_count"):
             if int_param in run:
                 try:
@@ -464,16 +459,7 @@ class EnaApiHandler:
             runs = list(filter(lambda r: r["run_accession"] in filter_accessions, runs))
 
         for run in runs:
-            private = run["first_public"] == ""
-            if not private and "fastq_ftp" in run and len(run["fastq_ftp"]) > 0:
-                run["raw_data_size"] = self.get_run_raw_size(run)
-            elif (
-                not private and "submitted_ftp" in run and len(run["submitted_ftp"]) > 0
-            ):
-                run["raw_data_size"] = self.get_run_raw_size(run, field="submitted_ftp")
-            else:
-                run["raw_data_size"] = None
-
+            run["raw_data_size"] = self.get_run_raw_size(run)
             for int_param in ("read_count", "base_count"):
                 if int_param in run:
                     try:
@@ -629,10 +615,11 @@ class EnaApiHandler:
         """Sum the values of fastq_bytes or submitted_bytes."""
         if "fastq_bytes" in run:
             return sum([int(s) for s in run["fastq_bytes"].split(";")])
-        if "submitted_bytes" in run:
+        elif "submitted_bytes" in run:
             return sum([int(s) for s in run["submitted_bytes"].split(";")])
-        logging.warning("Cannot get the RAW read file size.")
-        return 0
+        else:
+            logging.warning("Cannot get the RAW read file size.")
+            return None
 
     def get_updated_studies(self, cutoff_date, fields=None):
         data = get_default_params()
