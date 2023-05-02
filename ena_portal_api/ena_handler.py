@@ -93,26 +93,26 @@ SAMPLE_DEFAULT_FIELDS = ",".join(
 
 # NOTE: status_id is not supported by v2
 RUN_DEFAULT_FIELDS = [
-        "study_accession",
-        "secondary_study_accession",
-        "run_accession",
-        "library_source",
-        "library_strategy",
-        "library_layout",
-        "fastq_ftp",
-        "fastq_md5",
-        "fastq_bytes",
-        "base_count",
-        "read_count",
-        "instrument_platform",
-        "instrument_model",
-        "secondary_sample_accession",
-        "library_name",
-        "sample_alias",
-        "sample_title",
-        "sample_description",
-        "first_public",
-    ]
+    "study_accession",
+    "secondary_study_accession",
+    "run_accession",
+    "library_source",
+    "library_strategy",
+    "library_layout",
+    "fastq_ftp",
+    "fastq_md5",
+    "fastq_bytes",
+    "base_count",
+    "read_count",
+    "instrument_platform",
+    "instrument_model",
+    "secondary_sample_accession",
+    "library_name",
+    "sample_alias",
+    "sample_title",
+    "sample_description",
+    "first_public",
+]
 RUN_DEFAULT_FIELDS_STR = ",".join(RUN_DEFAULT_FIELDS)
 
 
@@ -120,41 +120,41 @@ RUN_DEFAULT_FIELDS_STR = ",".join(RUN_DEFAULT_FIELDS)
 # https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=metagenome
 # https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=ena
 ASSEMBLY_DEFAULT_FIELDS = [
-        "analysis_accession",
-        "analysis_alias",
-        "analysis_title",
-        "analysis_type",
-        "assembly_type",
-        "broker_name",
-        "center_name",
-        "description",
-        "first_public",
-        "last_updated",
-        "pipeline_name",
-        "pipeline_version",
-        "sample_accession",
-        "sample_alias",
-        "sample_description",
-        "sample_title",
-        "scientific_name",
-        "secondary_sample_accession",
-        "secondary_study_accession",
-        "study_accession",
-        "study_alias",
-        "study_title",
-        "submitted_aspera",
-        "submitted_bytes",
-        "submitted_ftp",
-        "submitted_galaxy",
-        "submitted_md5",
-        "tax_id",
-        "sequencing_method",  # Sequencing method used
-        "assembly_quality",  # Quality of assembly
-        "assembly_software",  # Assembly software
-        "taxonomic_classification",  # Taxonomic classification
-        "completeness_score",  # Completeness score (%)
-        "contamination_score",  # Contamination score (%)
-        "binning_software",  # Binning software
+    "analysis_accession",
+    "analysis_alias",
+    "analysis_title",
+    "analysis_type",
+    "assembly_type",
+    "broker_name",
+    "center_name",
+    "description",
+    "first_public",
+    "last_updated",
+    "pipeline_name",
+    "pipeline_version",
+    "sample_accession",
+    "sample_alias",
+    "sample_description",
+    "sample_title",
+    "scientific_name",
+    "secondary_sample_accession",
+    "secondary_study_accession",
+    "study_accession",
+    "study_alias",
+    "study_title",
+    "submitted_aspera",
+    "submitted_bytes",
+    "submitted_ftp",
+    "submitted_galaxy",
+    "submitted_md5",
+    "tax_id",
+    "sequencing_method",  # Sequencing method used
+    "assembly_quality",  # Quality of assembly
+    "assembly_software",  # Assembly software
+    "taxonomic_classification",  # Taxonomic classification
+    "completeness_score",  # Completeness score (%)
+    "contamination_score",  # Contamination score (%)
+    "binning_software",  # Binning software
 ]
 ASSEMBLY_DEFAULT_FIELDS_STR = ",".join(ASSEMBLY_DEFAULT_FIELDS)
 
@@ -611,7 +611,7 @@ class EnaApiHandler:
         session.mount("https://", adapter)
         return session
 
-    def get_run_raw_size(self, run, field="fastq_ftp"):
+    def get_run_raw_size(self, run):
         """Sum the values of fastq_bytes or submitted_bytes."""
         if "fastq_bytes" in run:
             if len(run["fastq_bytes"]):
