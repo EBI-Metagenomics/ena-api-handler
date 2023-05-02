@@ -614,12 +614,13 @@ class EnaApiHandler:
     def get_run_raw_size(self, run, field="fastq_ftp"):
         """Sum the values of fastq_bytes or submitted_bytes."""
         if "fastq_bytes" in run:
-            return sum([int(s) for s in run["fastq_bytes"].split(";")])
-        elif "submitted_bytes" in run:
-            return sum([int(s) for s in run["submitted_bytes"].split(";")])
-        else:
-            logging.warning("Cannot get the RAW read file size.")
-            return None
+            if len(run["fastq_bytes"]):
+                return sum([int(s) for s in run["fastq_bytes"].split(";")])
+        if "submitted_bytes" in run:
+            if len(run["submitted_ftp"]):
+                return sum([int(s) for s in run["submitted_bytes"].split(";")])
+        logging.warning("Cannot get the RAW read file size.")
+        return None
 
     def get_updated_studies(self, cutoff_date, fields=None):
         data = get_default_params()
