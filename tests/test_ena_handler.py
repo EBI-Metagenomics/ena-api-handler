@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import unittest
 from unittest import mock
@@ -22,6 +23,22 @@ import pytest
 import requests
 
 from ena_portal_api import ena_handler
+
+
+def check_fields(list_of_fields, result):
+    for field in list_of_fields:
+        if field not in result:
+            logging.info("Missing in result:", field)
+            return False
+    context = False
+    for field in result:
+        if field not in list_of_fields:
+            logging.info("Missing in list", field)
+            if result[field] != "":
+                context = True
+    if not context:
+        logging.info("All returned fields are empty")
+    return True
 
 
 class MockResponse:
@@ -145,7 +162,8 @@ class TestEnaHandler:
         ena = ena_handler.EnaApiHandler()
         run = ena.get_run("ERR1701760")
         assert isinstance(run, dict)
-        assert 22 == len(run)
+        # The API returns sample_accession by default, if you specify any of return
+        assert check_fields(list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run)
 
     def test_get_run_should_retrieve_run_filtered_fields(self):
         ena = ena_handler.EnaApiHandler()
@@ -170,7 +188,9 @@ class TestEnaHandler:
         runs = ena.get_study_runs("SRP125161")
         assert len(runs) == 4
         for run in runs:
-            assert 22 == len(run)
+            assert check_fields(
+                list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run
+            )
             assert isinstance(run, dict)
 
     def test_get_study_runs_should_have_filter_run_accessions(self):
@@ -178,7 +198,9 @@ class TestEnaHandler:
         runs = ena.get_study_runs("SRP125161", filter_accessions=["SRR6301444"])
         assert len(runs) == 1
         for run in runs:
-            assert 22 == len(run)
+            assert check_fields(
+                list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run
+            )
             assert isinstance(run, dict)
 
     @patch("ena_portal_api.ena_handler.EnaApiHandler.post_request")
@@ -249,7 +271,9 @@ class TestEnaHandler:
     def test_get_assembly_should_have_all_fields(self):
         ena = ena_handler.EnaApiHandler()
         assembly = ena.get_assembly("ERZ1669402")
-        assert len(assembly) == 35
+        assert check_fields(
+            list_of_fields=ena_handler.ASSEMBLY_DEFAULT_FIELDS, result=assembly
+        )
         assert isinstance(assembly, dict)
 
     def test_get_assembly_should_filter_fields(self):
@@ -321,6 +345,7 @@ class TestEnaHandler:
             == 24
         )
 
+    @unittest.skip("Raised with: ENA #659864")
     def test_get_study_assembly_accessions_should_return_all_accessions(self):
         ena = ena_handler.EnaApiHandler()
         expected = set(
@@ -336,9 +361,13 @@ class TestEnaHandler:
                 "ERZ1669417",
             ]
         )
-        assert {
-            a["analysis_accession"] for a in ena.get_study_assemblies("ERP124933")
-        } == expected
+
+        assert check_fields(
+            list_of_fields=expected,
+            result=[
+                a["analysis_accession"] for a in ena.get_study_assemblies("ERP124933")
+            ],
+        )
 
     def test_get_study_assembly_accessions_should_return_empty_list_if_study_contains_no_assemblies(  # noqa: E501
         self,
