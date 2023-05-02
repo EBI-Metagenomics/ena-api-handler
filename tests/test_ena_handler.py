@@ -161,7 +161,7 @@ class TestEnaHandler:
         ena = ena_handler.EnaApiHandler()
         run = ena.get_run("ERR1701760")
         assert isinstance(run, dict)
-        # why it returns sample_accession????
+        # The API returns sample_accession by default, if you specify any of return
         assert check_fields(list_of_fields=ena_handler.RUN_DEFAULT_FIELDS, result=run)
 
     def test_get_run_should_retrieve_run_filtered_fields(self):
@@ -264,7 +264,6 @@ class TestEnaHandler:
             ena.get_study_assemblies("ERP112609")
 
     def test_get_assembly_should_have_all_fields(self):
-        # missing analysis_title ???
         ena = ena_handler.EnaApiHandler()
         assembly = ena.get_assembly("ERZ1669402")
         assert check_fields(list_of_fields=ena_handler.ASSEMBLY_DEFAULT_FIELDS, result=assembly)

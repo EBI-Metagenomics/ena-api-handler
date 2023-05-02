@@ -165,7 +165,7 @@ def get_default_connection_headers():
     return {
         "headers": {
             "Content-Type": "application/x-www-form-urlencoded",
-            "accept": "*/*",
+            "Accept": "*/*",
         }
     }
 
