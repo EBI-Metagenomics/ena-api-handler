@@ -18,6 +18,7 @@ import os
 import unittest
 from unittest import mock
 from unittest.mock import patch
+import re
 
 import pytest
 import requests
@@ -182,6 +183,45 @@ class TestEnaHandler:
         ena.post_request = lambda r: MockResponse(500)
         with pytest.raises(ValueError):
             ena.get_run("ERR1701760")
+
+    def test_get_run_api_invalid_fields(self):
+        ena = ena_handler.EnaApiHandler()
+        with pytest.raises(ValueError) as exc_info:
+            ena.get_run("ERR1701760", fields="not_valid,doesnt_exist")
+        error_message = (
+            "Could not retrieve run with accession ERR1701760. "
+            "Error: Invalid fieldName(s) supplied: not_valid,doesnt_exist"
+        )
+        assert exc_info.value.args[0] == error_message
+
+    def test_get_run_should_try_with_different_data_portal(self):
+        ena = ena_handler.EnaApiHandler()
+        original_ena_post_request = ena.post_request
+
+        def mock_response_handler(data):
+            if data["dataPortal"] == "metagenome":
+                return MockResponse(204)
+            else:
+                return original_ena_post_request(data)
+
+        ena.post_request = mock_response_handler
+        run = ena.get_run("ERR1701760", fields="run_accession")
+        assert run == {"run_accession": "ERR1701760"}
+
+    def test_get_run_should_fail_after_N_retries(self):
+        # TODO: this and the sample one are very similiar, refactor
+        ena = ena_handler.EnaApiHandler()
+
+        def mock_response_handler(data):
+            return MockResponse(204, data={"message": "Mock error"})
+
+        ena.post_request = mock_response_handler
+        error_message = (
+            f"Could not find run ERRXXXX in ENA after {ena_handler.RETRY_COUNT} "
+            "attempts. ENA response: Mock error"
+        )
+        with pytest.raises(ValueError, match=error_message):
+            ena.get_run("ERRXXXX")
 
     def test_get_study_runs_should_have_all_fields(self):
         ena = ena_handler.EnaApiHandler()
@@ -378,3 +418,128 @@ class TestEnaHandler:
     def test_get_study_runs_should_return_empty_list_if_study_contains_no_runs(self):
         ena = ena_handler.EnaApiHandler()
         assert len(ena.get_study_runs("ERP105889")) == 0
+
+    def test_get_sample_valid_accession(self):
+        ena = ena_handler.EnaApiHandler()
+        sample = ena.get_sample("SAMN11835464")
+        expected_sample = {
+            "sample_accession": "SAMN11835464",
+            "secondary_sample_accession": "SRS5453518",
+            "sample_alias": "T8",
+            "description": "human metagenome isolated from Oncocytoma of the kidney",
+            "tax_id": "646099",
+            "scientific_name": "human metagenome",
+            "host_tax_id": "",
+            "host_status": "",
+            "host_sex": "",
+            "submitted_host_sex": "",
+            "host_body_site": "",
+            "host_gravidity": "",
+            "host_genotype": "",
+            "host_phenotype": "",
+            "host_growth_conditions": "",
+            "collection_date": "2015-03-24",
+            "collected_by": "",
+            "country": "Italy: Aquila",
+            "location": "42.21 N 13.24 E",
+            "depth": "",
+            "altitude": "",
+            "elevation": "",
+            "first_public": "2019-05-22",
+            "checklist": "",
+            "center_name": "University of Milan",
+            "broker_name": "NCBI",
+            "investigation_type": "",
+            "experimental_factor": "",
+            "environment_biome": "",
+            "environment_feature": "",
+            "environment_material": "",
+            "temperature": "",
+            "salinity": "",
+            "ph": "",
+            "sample_collection": "",
+            "project_name": "",
+            "target_gene": "",
+            "sequencing_method": "",
+            "sample_title": "Metagenome or environmental sample from human metagenome",
+            'host': "Homo sapiens",
+            'ncbi_reporting_standard': "Metagenome or environmental",
+            'status': "public",
+        }
+        assert sample == expected_sample
+
+    def test_get_sample_invalid_accession(self):
+        ena = ena_handler.EnaApiHandler()
+        with pytest.raises(ValueError, match="Could not find sample FAKESAMPLE in ENA"):
+            sample = ena.get_sample("FAKESAMPLE")
+            assert sample is None
+
+    def test_get_sample_unkown_fields(self):
+        ena = ena_handler.EnaApiHandler()
+        expected_error = (
+            "Could not retrieve sample with accession SAMN11835464."
+            " Error: Invalid fieldName(s) supplied: "
+            "wrong_field,and_very_wrong_field"
+        )
+        with pytest.raises(ValueError, match=re.escape(expected_error)):
+            ena.get_sample("SAMN11835464", fields="wrong_field,and_very_wrong_field")
+
+    def test_get_sample_with_retry(self):
+        ena = ena_handler.EnaApiHandler()
+        original_ena_post_request = ena.post_request
+
+        def mock_response_handler(data):
+            if data["dataPortal"] == "metagenome":
+                return MockResponse(204)
+            else:
+                return original_ena_post_request(data)
+
+        ena.post_request = mock_response_handler
+        sample = ena.get_sample("SAMN11835464", fields="sample_accession")
+        assert sample == {"sample_accession": "SAMN11835464"}
+
+    def test_get_sample_api_fail(self):
+        ena = ena_handler.EnaApiHandler()
+
+        def mock_response_handler(data):
+            return MockResponse(404, data={"message": "ENA API ERROR"})
+
+        ena.post_request = mock_response_handler
+        error_message = (
+            "Could not retrieve sample with accession"
+            " SAMN11835464. Error: ENA API ERROR"
+        )
+        with pytest.raises(ValueError, match=error_message):
+            sample = ena.get_sample("SAMN11835464", fields="sample_accession")
+            assert sample is None
+
+    def test_get_sample_api_fail_response_not_json(self):
+        ena = ena_handler.EnaApiHandler()
+
+        def mock_response_handler(data):
+            return MockResponse(404, text="ENA API ERROR")
+
+        ena.post_request = mock_response_handler
+        error_message = (
+            "Could not retrieve sample with accession"
+            " SAMN11835464. Error: ENA API ERROR"
+        )
+        with pytest.raises(ValueError, match=error_message):
+            sample = ena.get_sample("SAMN11835464", fields="sample_accession")
+            assert False
+            assert sample is None
+
+    def test_get_sample_should_fail_after_N_retries(self):
+        ena = ena_handler.EnaApiHandler()
+
+        def mock_response_handler(data):
+            return MockResponse(204, data={"message": "Mock error"})
+
+        ena.post_request = mock_response_handler
+        error_message = (
+            f"Could not find sample ERSXXXX in ENA after {ena_handler.RETRY_COUNT} "
+            "attempts. "
+            "ENA response: Mock error"
+        )
+        with pytest.raises(ValueError, match=error_message):
+            ena.get_sample("ERSXXXX")
