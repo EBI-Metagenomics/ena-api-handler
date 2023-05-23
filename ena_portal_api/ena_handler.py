@@ -74,7 +74,7 @@ SAMPLE_DEFAULT_FIELDS = ",".join(
         "checklist",
         "center_name",
         "broker_name",
-        "environmental_package",  # FIXME: Reported to ENA
+        "ncbi_reporting_standard",
         "investigation_type",
         "experimental_factor",
         "environment_biome",
@@ -88,8 +88,8 @@ SAMPLE_DEFAULT_FIELDS = ",".join(
         "target_gene",
         "sequencing_method",
         "sample_title",
-        "status_id",  # FIXME: Reported to ENA
-        "host_scientific_name",  # FIXME: Reported to ENA
+        "status",
+        "host",
     ]
 )
 
