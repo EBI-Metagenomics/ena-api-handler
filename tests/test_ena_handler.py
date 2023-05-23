@@ -462,6 +462,9 @@ class TestEnaHandler:
             "target_gene": "",
             "sequencing_method": "",
             "sample_title": "Metagenome or environmental sample from human metagenome",
+            'host': "Homo sapiens",
+            'ncbi_reporting_standard': "Metagenome or environmental",
+            'status': "public",
         }
         assert sample == expected_sample
 
