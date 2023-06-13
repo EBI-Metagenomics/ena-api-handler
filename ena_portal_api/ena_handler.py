@@ -221,7 +221,7 @@ class EnaApiHandler:
                 return data.get("message", message)
             else:
                 return message
-        except requests.JSONDecodeError:
+        except json.decoder.JSONDecodeError:
             return message
 
     # Supports ENA primary and secondary study accessions
@@ -441,7 +441,7 @@ class EnaApiHandler:
             if not len(data):
                 raise ValueError(f"Could not find run {run_accession} in ENA.")
             run = data[0]
-        except (IndexError, requests.JSONDecodeError) as exception:
+        except (IndexError, json.decoder.JSONDecodeError) as exception:
             logging.exception(exception)
             raise ValueError(
                 f"Could not find run {run_accession} in ENA. Error {exception}"
@@ -562,7 +562,8 @@ class EnaApiHandler:
             raise ValueError(
                 f"Could not retrieve assemblies for study {study_accession}. Error {api_error}"
             )
-        elif response.status_code == 204:
+        #   try with different data portal if empty response
+        elif response.status_code == 204 or not len(response.json()):
             if retry:
                 new_portal = "ena" if data_portal == "metagenome" else "ena"
                 return self.get_study_assemblies(
@@ -619,7 +620,7 @@ class EnaApiHandler:
             )
         try:
             assembly = response.json()[0]
-        except (requests.JSONDecodeError, IndexError, TypeError, ValueError):
+        except (json.decoder.JSONDecodeError, IndexError, TypeError, ValueError):
             raise ValueError(f"Could not find assembly of sample {sample_name} in ENA.")
 
         return assembly
@@ -651,14 +652,13 @@ class EnaApiHandler:
         try:
             assembly = response.json()[0]
         except (
-            requests.JSONDecodeError,
             IndexError,
             TypeError,
             ValueError,
         ) as exception:
             logging.exception(exception)
             raise ValueError(
-                "There was an error while getting assembly {assembly_name} from ENA."
+                f"There was an error while getting assembly {assembly_name} from ENA."
             )
 
         return assembly
@@ -718,7 +718,7 @@ class EnaApiHandler:
         try:
             studies = response.json()
         except (
-            requests.JSONDecodeError,
+            json.decoder.JSONDecodeError,
             IndexError,
             TypeError,
             ValueError,
