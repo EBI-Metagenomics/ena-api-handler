@@ -257,8 +257,6 @@ class TestEnaHandler:
         runs = ena.get_study_runs(
             "SRP125161", filter_accessions=["SRR6301444"]
         )  # private=True was removed
-        print("RUNS HERE!!!!")
-        print(runs)
         assert len(runs) == 1
         for run in runs:
             assert 20 == len(run)
