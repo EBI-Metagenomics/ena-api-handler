@@ -93,7 +93,6 @@ SAMPLE_DEFAULT_FIELDS = ",".join(
     ]
 )
 
-# NOTE: status_id is not supported by v2
 RUN_DEFAULT_FIELDS = [
     "study_accession",
     "secondary_study_accession",
@@ -114,6 +113,7 @@ RUN_DEFAULT_FIELDS = [
     "sample_title",
     "sample_description",
     "first_public",
+    "status",
 ]
 RUN_DEFAULT_FIELDS_STR = ",".join(RUN_DEFAULT_FIELDS)
 
