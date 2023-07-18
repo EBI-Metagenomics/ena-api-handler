@@ -18,7 +18,7 @@ from setuptools import setup
 import os
 import sys
 
-version = "2.0.0"
+version = "2.0.1"
 
 _base = os.path.dirname(os.path.abspath(__file__))
 _requirements = os.path.join(_base, "requirements.txt")
