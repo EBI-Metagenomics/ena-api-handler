@@ -12,8 +12,8 @@ repos:
       - id: black
         language: python
         language_version: python3
-  - repo: https://gitlab.com/pycqa/flake8
-    rev: "3.8.3"
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
     hooks:
-      - id: flake8
-        language: python
+      - id: ruff
+        args: [--fix]
