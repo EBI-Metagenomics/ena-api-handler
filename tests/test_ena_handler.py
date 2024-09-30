@@ -117,8 +117,6 @@ class TestEnaHandler:
     ):
         """This will iterate over all cases above. It will test each accession
         type individual and together.
-        :param accession_arg:
-        :return:
         """
         ena = ena_handler.EnaApiHandler()
         study = ena.get_study(**accession_arg)
@@ -429,7 +427,7 @@ class TestEnaHandler:
             "description": "human metagenome isolated from Oncocytoma of the kidney",
             "tax_id": "646099",
             "scientific_name": "human metagenome",
-            "host_tax_id": "",
+            "host_tax_id": "9606",
             "host_status": "",
             "host_sex": "",
             "submitted_host_sex": "",
@@ -462,9 +460,9 @@ class TestEnaHandler:
             "target_gene": "",
             "sequencing_method": "",
             "sample_title": "Metagenome or environmental sample from human metagenome",
-            'host': "Homo sapiens",
-            'ncbi_reporting_standard': "Metagenome or environmental",
-            'status': "public",
+            "host": "Homo sapiens",
+            "ncbi_reporting_standard": "Metagenome or environmental",
+            "status": "public",
         }
         assert sample == expected_sample
 

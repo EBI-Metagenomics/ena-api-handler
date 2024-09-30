@@ -200,9 +200,6 @@ class EnaApiHandler:
                 self.url, data=data, auth=self.auth, **get_default_connection_headers()
             )
         else:
-            logging.warning(
-                "Not authenticated, set env vars ENA_API_USER and ENA_API_PASSWORD to access private data."  # noqa: E501
-            )
             response = requests.post(
                 self.url, data=data, **get_default_connection_headers()
             )
@@ -234,15 +231,13 @@ class EnaApiHandler:
         data["fields"] = fields or STUDY_DEFAULT_FIELDS
 
         if primary_accession and not secondary_accession:
-            data["query"] = 'study_accession="{}"'.format(primary_accession)
+            data["query"] = f'study_accession="{primary_accession}"'
         elif not primary_accession and secondary_accession:
-            data["query"] = 'secondary_study_accession="{}"'.format(secondary_accession)
+            data["query"] = f'secondary_study_accession="{secondary_accession}"'
         else:
             data[
                 "query"
-            ] = 'study_accession="{}" AND secondary_study_accession="{}"'.format(
-                primary_accession, secondary_accession
-            )
+            ] = f'study_accession="{primary_accession}" AND secondary_study_accession="{secondary_accession}"'
 
         query_params = []
         for result_type in ["study", "read_study", "analysis_study"]:
@@ -406,13 +401,16 @@ class EnaApiHandler:
                 )
             )
 
-        if response.status_code == 204:
+        if (
+            response.status_code == requests.codes.no_content
+            or response.status_code == requests.codes.ok
+            and not response.json()
+        ):
             if attempt < 2:
                 attempt += 1
                 sleep(1)
                 logging.warning(
-                    "Error 204 when retrieving run {} in dataPortal {}, "
-                    "retrying {}".format(run_accession, data.get("dataPortal"), attempt)
+                    f"Error 204 when retrieving run {run_accession} in dataPortal {data.get('dataPortal')}, retrying {attempt}"
                 )
                 return self.get_run(
                     run_accession=run_accession,
@@ -463,21 +461,41 @@ class EnaApiHandler:
 
     def get_study_runs(
         self,
-        study_acc,
+        study_accession,
         fields=None,
         filter_assembly_runs=True,
         filter_accessions=None,
         search_params=None,
+        retry=True,
+        swap_data_portal=False,
     ):
-        """FIXME: no doc string"""
+        """
+        Retrieves runs for a given study accession, optionally filtering them by library strategy or accessions.
+
+        :param str study_accession: The accession identifier for the study.
+        :param str fields: A comma-separated string of fields to retrieve for each run.
+        :param bool filter_assembly_runs: Whether to filter runs based on `library_strategy`.
+        :param list filter_accessions: A list of run accessions to filter the results by.
+        :param dict search_params: Additional parameters for the search.
+        :param bool retry: Whether to retry the request on failure.
+        :param bool swap_data_portal: Whether to try the alternate data portal on failure.
+        :return: A list of filtered run records.
+        :rtype: list
+        :raises ValueError: If the runs could not be retrieved or parsed.
+        """
         data = get_default_params()
         data["result"] = "read_run"
         data["fields"] = fields or RUN_DEFAULT_FIELDS_STR
         data[
             "query"
-        ] = '(study_accession="{}" OR secondary_study_accession="{}")'.format(
-            study_acc, study_acc
-        )
+        ] = f'(study_accession="{study_accession}" OR secondary_study_accession="{study_accession}")'
+
+        if swap_data_portal:
+            # It's possible that this data portal doesn't have the data, so we try the other one.
+            search_params = search_params or {}
+            data_portal = search_params.get("dataPortal")
+            data_portal = "metagenome" if data_portal == "ena" else "ena"
+            search_params["dataPortal"] = data_portal
 
         if search_params:
             data.update(search_params)
@@ -488,26 +506,46 @@ class EnaApiHandler:
         response = self.post_request(data)
 
         if not response.ok:
-            logging.debug(
-                "Error retrieving study runs {}, response code: {}".format(
-                    study_acc, response.status_code
+            # Retry to handle flaky networks or intermittent API issues
+            if retry:
+                return self.get_study_runs(
+                    study_accession,
+                    fields=fields,
+                    filter_assembly_runs=filter_assembly_runs,
+                    filter_accessions=filter_accessions,
+                    search_params=search_params,
+                    retry=False,
+                    swap_data_portal=swap_data_portal,
                 )
+            logging.debug(
+                f"Error retrieving study runs {study_accession}, response code: {response.status_code}"
             )
             api_error = self._parse_response_error(response)
             raise ValueError(
-                (
-                    f"Could not retrieve runs for study {study_acc}. "
-                    f"ENA response: {api_error}"
-                )
+                f"Could not retrieve runs for study {study_accession}. ENA response: {api_error}"
             )
-        elif response.status_code == 204:
-            return []
+
+        if retry and (
+            response.status_code == requests.codes.no_content
+            or (response.status_code == requests.codes.ok and not response.json())
+        ):
+            return self.get_study_runs(
+                study_accession,
+                fields=fields,
+                filter_assembly_runs=filter_assembly_runs,
+                filter_accessions=filter_accessions,
+                search_params=search_params,
+                retry=False,
+                swap_data_portal=True,
+            )
 
         runs = response.json()
 
         if filter_assembly_runs:
+            # Filter based on `library_strategy`.
             runs = list(filter(run_filter, runs))
         if filter_accessions:
+            # Filter runs by specific accessions.
             runs = list(filter(lambda r: r["run_accession"] in filter_accessions, runs))
 
         for run in runs:
@@ -517,6 +555,9 @@ class EnaApiHandler:
                     try:
                         run[int_param] = int(run[int_param])
                     except ValueError:
+                        logging.warning(
+                            f"Invalid value for {int_param} in run: {run[int_param]}"
+                        )
                         run[int_param] = None
         return runs
 
@@ -563,7 +604,11 @@ class EnaApiHandler:
                 f"Could not retrieve assemblies for study {study_accession}. Error {api_error}"
             )
         #   try with different data portal if empty response
-        elif response.status_code == 204 or not len(response.json()):
+        elif (
+            response.status_code == requests.codes.no_content
+            or response.status_code == requests.codes.ok
+            and not response.json()
+        ):
             if retry:
                 new_portal = "ena" if data_portal == "metagenome" else "ena"
                 return self.get_study_assemblies(
@@ -626,29 +671,54 @@ class EnaApiHandler:
         return assembly
 
     def get_assembly(
-        self, assembly_name, fields=None, data_portal="metagenome", retry=True
+        self, assembly_accession, fields=None, data_portal="metagenome", retry=True
     ):
-        """FIXME: no doc string"""
+        """
+        Retrieves an assembly record from a specified data portal, using the given assembly accession.
+
+        This method calls the ENA Portal API using the assembly accession.
+        If the initial response is not successful, an error is logged and raised.
+        If the response status code is 204 (no content) and retry is enabled, it will
+        attempt the query using a different data portal (switching between "ena" and "metagenome").
+
+        :param str assembly_accession: The assembly accession to be retrieved (ERZXXXXX).
+        :param list or str fields: The fields to be retrieved in the response. Defaults
+            to `ASSEMBLY_DEFAULT_FIELDS_STR` if not provided.
+        :param str data_portal: The data portal to query from, either "ena" or "metagenome".
+        :param bool retry: If `True`, retry the request once with a different data portal
+            in case of a 204 response code or an empty response. Defaults to `True`.
+        :returns: A dict representing the assembly record.
+        :rtype: dict
+        :raises ValueError: If the assembly record cannot be retrieved due to an error in the
+            response or parsing the response.
+        """
         data = get_default_params()
         data["result"] = "analysis"
         data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
-        data["query"] = 'analysis_accession="{}"'.format(assembly_name)
+        data["query"] = f'analysis_accession="{assembly_accession}"'
         data["dataPortal"] = data_portal
         response = self.post_request(data)
 
         if not response.ok:
             logging.error(
                 "Error retrieving assembly {}, response code: {}".format(
-                    assembly_name, response.status_code
+                    assembly_accession, response.status_code
                 )
             )
             api_error = self._parse_response_error(response)
             raise ValueError(
-                f"Could not retrieve assembly {assembly_name}. Error {api_error}"
+                f"Could not retrieve assembly {assembly_accession}. Error {api_error}"
             )
-        elif retry and response.status_code == 204:
+        elif retry and (
+            response.status_code == requests.codes.no_content
+            or response.status_code == requests.codes.ok
+            and not response.json()
+        ):
             new_portal = "ena" if data_portal == "metagenome" else "metagenome"
-            return self.get_assembly(assembly_name, fields, new_portal, retry=False)
+            return self.get_assembly(
+                assembly_accession, fields, new_portal, retry=False
+            )
+
         try:
             assembly = response.json()[0]
         except (
@@ -658,7 +728,7 @@ class EnaApiHandler:
         ) as exception:
             logging.exception(exception)
             raise ValueError(
-                f"There was an error while getting assembly {assembly_name} from ENA."
+                f"There was an error while getting assembly {assembly_accession} from ENA."
             )
 
         return assembly
