@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ena_api_libs"
+version = "2.0.4"
+description = "ENA Portal API Libraries"
+authors = [
+    {name = "Microbiome Informatics Team", email = "metagenomics@ebi.ac.uk"}
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+
+dependencies = [
+    "httpx",
+    "pydantic"
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pre-commit"
+]
+test = [
+    "pytest",
+    "pytest-cov"
+]
+
+[project.urls]
+Homepage = "https://github.com/your-repo-url"  # Replace with actual repo URL
+
+[tool.setuptools]
+packages = ["ena_portal_api"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "tests/*.py"
+addopts = [
+    "--cov=ena_portal_api",
+    "--cov-report=xml",
+    "--cov-report=html"
+]
+log_cli = true
+
+[tool.ruff]
+line-length = 110
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # Line too long (handled by line-length)
+
+[tool.black]
+line-length = 110
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3

@@ -26,9 +26,7 @@ from urllib3 import Retry
 
 # TODO: move the constants to a .constants.py file
 
-ENA_API_URL = os.environ.get(
-    "ENA_API_URL", "https://www.ebi.ac.uk/ena/portal/api/v2.0/search"
-)
+ENA_API_URL = os.environ.get("ENA_API_URL", "https://www.ebi.ac.uk/ena/portal/api/v2.0/search")
 
 RETRY_COUNT = 5
 
@@ -117,7 +115,6 @@ RUN_DEFAULT_FIELDS = [
 ]
 RUN_DEFAULT_FIELDS_STR = ",".join(RUN_DEFAULT_FIELDS)
 
-
 # To get the possible fields:
 # https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=metagenome
 # https://www.ebi.ac.uk/ena/portal/api/v2.0/returnFields?result=analysis&dataPortal=ena
@@ -196,13 +193,9 @@ class EnaApiHandler:
 
     def post_request(self, data):
         if self.auth:
-            response = requests.post(
-                self.url, data=data, auth=self.auth, **get_default_connection_headers()
-            )
+            response = requests.post(self.url, data=data, auth=self.auth, **get_default_connection_headers())
         else:
-            response = requests.post(
-                self.url, data=data, **get_default_connection_headers()
-            )
+            response = requests.post(self.url, data=data, **get_default_connection_headers())
         return response
 
     def _parse_response_error(self, response):
@@ -222,9 +215,7 @@ class EnaApiHandler:
             return message
 
     # Supports ENA primary and secondary study accessions
-    def get_study(
-        self, primary_accession=None, secondary_accession=None, fields=None, attempt=0
-    ):
+    def get_study(self, primary_accession=None, secondary_accession=None, fields=None, attempt=0):
         """FIXME: no doc string"""
         data = get_default_params()
         data["result"] = "read_study"
@@ -247,32 +238,22 @@ class EnaApiHandler:
                 param["dataPortal"] = data_portal
                 if result_type == "study":
                     if "description" in param["fields"]:
-                        param["fields"] = param["fields"].replace(
-                            "description", "study_description"
-                        )
+                        param["fields"] = param["fields"].replace("description", "study_description")
                     if "study_alias" in param["fields"]:
-                        param["fields"] = param["fields"].replace(
-                            "study_alias", "study_name"
-                        )
+                        param["fields"] = param["fields"].replace("study_alias", "study_name")
                 query_params.append(param)
 
         for param in query_params:
             try:
                 return self._get_study(param)
             except NoDataException:
-                logging.info(
-                    "No info found to fetch study with params {}".format(param)
-                )
+                logging.info("No info found to fetch study with params {}".format(param))
 
                 pass
             except (IndexError, TypeError, ValueError, KeyError):
                 logging.info("Failed to fetch study with params {}".format(param))
 
-        raise ValueError(
-            "Could not find study {} {} in ENA.".format(
-                primary_accession, secondary_accession
-            )
-        )
+        raise ValueError("Could not find study {} {} in ENA.".format(primary_accession, secondary_accession))
 
     def _get_study(self, data):
         """FIXME: no doc string"""
@@ -302,9 +283,7 @@ class EnaApiHandler:
         data = get_default_params()
         data["result"] = "sample"
         data["fields"] = fields or SAMPLE_DEFAULT_FIELDS
-        data[
-            "query"
-        ] = '(sample_accession="{acc}" OR secondary_sample_accession="{acc}") '.format(
+        data["query"] = '(sample_accession="{acc}" OR secondary_sample_accession="{acc}") '.format(
             acc=sample_accession
         )
 
@@ -321,9 +300,7 @@ class EnaApiHandler:
 
         if not response.ok:
             logging.error(
-                "Error retrieving sample {}, response code: {}".format(
-                    sample_accession, response.status_code
-                )
+                "Error retrieving sample {}, response code: {}".format(sample_accession, response.status_code)
             )
             api_error = self._parse_response_error(response)
             raise ValueError(
@@ -331,9 +308,7 @@ class EnaApiHandler:
             )
         elif response.status_code == 204:
             if attempt < 2:
-                new_params = {
-                    "dataPortal": "metagenome" if data["dataPortal"] == "ena" else "ena"
-                }
+                new_params = {"dataPortal": "metagenome" if data["dataPortal"] == "ena" else "ena"}
                 attempt += 1
                 return self.get_sample(
                     sample_accession,
@@ -379,9 +354,7 @@ class EnaApiHandler:
             # FIXME: refactor this, use response.json()
             return {s["secondary_study_accession"] for s in json.loads(response.text)}
 
-    def get_run(
-        self, run_accession, fields=None, public=True, attempt=0, search_params=None
-    ):
+    def get_run(self, run_accession, fields=None, public=True, attempt=0, search_params=None):
         """FIXME: no doc string"""
         data = get_default_params()
         data["result"] = "read_run"
@@ -395,10 +368,7 @@ class EnaApiHandler:
         if not response.ok:
             api_error = self._parse_response_error(response)
             raise ValueError(
-                (
-                    f"Could not retrieve run with accession {run_accession}. "
-                    f"Error: {api_error}"
-                )
+                (f"Could not retrieve run with accession {run_accession}. " f"Error: {api_error}")
             )
 
         if (
@@ -441,9 +411,7 @@ class EnaApiHandler:
             run = data[0]
         except (IndexError, json.decoder.JSONDecodeError) as exception:
             logging.exception(exception)
-            raise ValueError(
-                f"Could not find run {run_accession} in ENA. Error {exception}"
-            )
+            raise ValueError(f"Could not find run {run_accession} in ENA. Error {exception}")
 
         # FIXME: Explain this #
         if fields is None or "raw_data_size" in fields:
@@ -555,9 +523,7 @@ class EnaApiHandler:
                     try:
                         run[int_param] = int(run[int_param])
                     except ValueError:
-                        logging.warning(
-                            f"Invalid value for {int_param} in run: {run[int_param]}"
-                        )
+                        logging.warning(f"Invalid value for {int_param} in run: {run[int_param]}")
                         run[int_param] = None
         return runs
 
@@ -577,13 +543,9 @@ class EnaApiHandler:
         data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
 
         query = "("
-        query += 'study_accession="{study_accession}"'.format(
-            study_accession=study_accession
-        )
+        query += 'study_accession="{study_accession}"'.format(study_accession=study_accession)
         query += " OR "
-        query += 'secondary_study_accession="{study_accession}"'.format(
-            study_accession=study_accession
-        )
+        query += 'secondary_study_accession="{study_accession}"'.format(study_accession=study_accession)
         query += ")"
 
         if not allow_non_primary_assembly:
@@ -600,9 +562,7 @@ class EnaApiHandler:
                 )
             )
             api_error = self._parse_response_error(response)
-            raise ValueError(
-                f"Could not retrieve assemblies for study {study_accession}. Error {api_error}"
-            )
+            raise ValueError(f"Could not retrieve assemblies for study {study_accession}. Error {api_error}")
         #   try with different data portal if empty response
         elif (
             response.status_code == requests.codes.no_content
@@ -621,25 +581,17 @@ class EnaApiHandler:
                 )
             else:
                 # TODO: this doesn't match other empty responses, which raise a ValueError
-                logging.debug(
-                    f"There are no assemblies for the study {study_accession}"
-                )
+                logging.debug(f"There are no assemblies for the study {study_accession}")
                 return []
 
         assemblies = response.json()
 
         if filter_accessions:
-            assemblies = list(
-                filter(
-                    lambda r: r["analysis_accession"] in filter_accessions, assemblies
-                )
-            )
+            assemblies = list(filter(lambda r: r["analysis_accession"] in filter_accessions, assemblies))
 
         return assemblies
 
-    def get_assembly_from_sample(
-        self, sample_name, fields=None, data_portal="metagenome", retry=True
-    ):
+    def get_assembly_from_sample(self, sample_name, fields=None, data_portal="metagenome", retry=True):
         """FIXME: no doc string"""
         data = get_default_params()
         data["result"] = "analysis"
@@ -655,14 +607,10 @@ class EnaApiHandler:
                 )
             )
             api_error = self._parse_response_error(response)
-            raise ValueError(
-                f"Could not retrieve assembly for sample {sample_name}. Error {api_error}"
-            )
+            raise ValueError(f"Could not retrieve assembly for sample {sample_name}. Error {api_error}")
         elif retry and response.status_code == 204:
             new_portal = "ena" if data_portal == "metagenome" else "metagenome"
-            return self.get_assembly_from_sample(
-                sample_name, fields, new_portal, retry=False
-            )
+            return self.get_assembly_from_sample(sample_name, fields, new_portal, retry=False)
         try:
             assembly = response.json()[0]
         except (json.decoder.JSONDecodeError, IndexError, TypeError, ValueError):
@@ -670,9 +618,7 @@ class EnaApiHandler:
 
         return assembly
 
-    def get_assembly(
-        self, assembly_accession, fields=None, data_portal="metagenome", retry=True
-    ):
+    def get_assembly(self, assembly_accession, fields=None, data_portal="metagenome", retry=True):
         """
         Retrieves an assembly record from a specified data portal, using the given assembly accession.
 
@@ -706,18 +652,14 @@ class EnaApiHandler:
                 )
             )
             api_error = self._parse_response_error(response)
-            raise ValueError(
-                f"Could not retrieve assembly {assembly_accession}. Error {api_error}"
-            )
+            raise ValueError(f"Could not retrieve assembly {assembly_accession}. Error {api_error}")
         elif retry and (
             response.status_code == requests.codes.no_content
             or response.status_code == requests.codes.ok
             and not response.json()
         ):
             new_portal = "ena" if data_portal == "metagenome" else "metagenome"
-            return self.get_assembly(
-                assembly_accession, fields, new_portal, retry=False
-            )
+            return self.get_assembly(assembly_accession, fields, new_portal, retry=False)
 
         try:
             assembly = response.json()[0]
@@ -727,16 +669,12 @@ class EnaApiHandler:
             ValueError,
         ) as exception:
             logging.exception(exception)
-            raise ValueError(
-                f"There was an error while getting assembly {assembly_accession} from ENA."
-            )
+            raise ValueError(f"There was an error while getting assembly {assembly_accession} from ENA.")
 
         return assembly
 
     @staticmethod
-    def requests_retry_session(
-        retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None
-    ):
+    def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504), session=None):
         """FIXME: no doc string"""
         session = session or requests.Session()
         retry = Retry(
@@ -775,11 +713,7 @@ class EnaApiHandler:
         status_code = str(response.status_code)
 
         if status_code[0] != "2":
-            logging.error(
-                "Error retrieving studies, response code: {}".format(
-                    response.status_code
-                )
-            )
+            logging.error("Error retrieving studies, response code: {}".format(response.status_code))
             api_error = self._parse_response_error(response)
             raise ValueError(f"Could not retrieve studies. Error {api_error}")
         elif status_code == "204":
@@ -812,9 +746,7 @@ class EnaApiHandler:
         # FIXME: status code to STR?
         status_code = str(response.status_code)
         if status_code[0] != "2":
-            logging.error(
-                f"Error retrieving run, response code: {response.status_code}"
-            )
+            logging.error(f"Error retrieving run, response code: {response.status_code}")
             api_error = self._parse_response_error(response)
             raise ValueError(f"Could not retrieve runs. Error: {api_error}")
         elif status_code == "204":
@@ -837,18 +769,12 @@ class EnaApiHandler:
         data["limit"] = 0
         data["result"] = "analysis"
         data["fields"] = fields or ASSEMBLY_DEFAULT_FIELDS_STR
-        data["query"] = 'assembly_type="{}" AND last_updated>={}'.format(
-            "primary metagenome", cutoff_date
-        )
+        data["query"] = 'assembly_type="{}" AND last_updated>={}'.format("primary metagenome", cutoff_date)
         response = self.post_request(data)
         # FIXME: status code to STR?
         status_code = str(response.status_code)
         if status_code[0] != "2":
-            logging.debug(
-                "Error retrieving assemblies, response code: {}".format(
-                    response.status_code
-                )
-            )
+            logging.debug("Error retrieving assemblies, response code: {}".format(response.status_code))
             logging.debug("Response: {}".format(response.text))
             raise ValueError("Could not retrieve assemblies.")
         elif status_code == "204":
@@ -859,11 +785,7 @@ class EnaApiHandler:
         except (IndexError, TypeError, ValueError) as e:
             logging.debug(e)
             logging.debug(response.text)
-            raise ValueError(
-                "Could not find any assemblies in ENA updated after {}".format(
-                    cutoff_date
-                )
-            )
+            raise ValueError("Could not find any assemblies in ENA updated after {}".format(cutoff_date))
         return assemblies
 
     # cutoff_date in format YYYY-MM-DD
@@ -879,11 +801,7 @@ class EnaApiHandler:
         # FIXME: status code to STR?
         status_code = str(response.status_code)
         if status_code[0] != "2":
-            logging.error(
-                "Error retrieving assemblies, response code: {}".format(
-                    response.status_code
-                )
-            )
+            logging.error("Error retrieving assemblies, response code: {}".format(response.status_code))
             api_error = self._parse_response_error(response)
             raise ValueError(f"Could not retrieve assemblies. Error {api_error}")
         elif status_code == "204":
@@ -895,9 +813,7 @@ class EnaApiHandler:
         except (IndexError, TypeError, ValueError) as exception:
             logging.exception(exception)
             logging.debug(response.text)
-            raise ValueError(
-                f"Could not find any assemblies in ENA updated after {cutoff_date}"
-            )
+            raise ValueError(f"Could not find any assemblies in ENA updated after {cutoff_date}")
         return assemblies
 
     @staticmethod
