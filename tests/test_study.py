@@ -1,8 +1,6 @@
 # tests/models/test_study.py
-import pytest
 from ena_portal_api.ena_api_requests import ENAAPIRequest, ENAPortalResultType
 from ena_portal_api.models.study import StudyFields, StudyQuery
-from ena_portal_api.query.base import ENAQueryPair
 
 
 def test_study_fields_query():
@@ -10,8 +8,8 @@ def test_study_fields_query():
     request = ENAAPIRequest(
         result=ENAPortalResultType.STUDY,
         query=(
-            StudyQuery(study_accession="PRJDA33427") |
-            StudyQuery(secondary_study_accession="ERP1")
+            StudyQuery(study_accession="PRJDA33427")
+            | StudyQuery(secondary_study_accession="ERP1")
         ),
         fields=[
             StudyFields.STUDY_NAME,

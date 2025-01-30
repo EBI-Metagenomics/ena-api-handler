@@ -17,36 +17,41 @@ class ENAQueryClause(BaseModel):
             value = value.strftime("%Y-%m-%d")
         return f"{ENAQueryOperators.NOT if self.is_not else ''} {self.search_field}={value}".strip()
 
-    def __or__(self, other: Union['Self', 'ENAQueryPair']) -> 'ENAQueryPair':
+    def __or__(self, other: Union["Self", "ENAQueryPair"]) -> "ENAQueryPair":
         return ENAQueryPair(left=self, operator=ENAQueryOperators.OR, right=other)
 
-    def __and__(self, other: Union['Self', 'ENAQueryPair']) -> 'ENAQueryPair':
+    def __and__(self, other: Union["Self", "ENAQueryPair"]) -> "ENAQueryPair":
         return ENAQueryPair(left=self, operator=ENAQueryOperators.AND, right=other)
 
-    def __invert__(self) -> 'Self':
+    def __invert__(self) -> "Self":
         return ENAQueryClause(
             search_field=self.search_field, value=self.value, is_not=not self.is_not
         )
 
 
-QueryType = TypeVar('QueryType', bound='BaseENAQueryConditions')
+QueryType = TypeVar("QueryType", bound="BaseENAQueryConditions")
+
 
 class ENAQueryPair(BaseModel):
     operator: ENAQueryOperators = Field(ENAQueryOperators.AND)
-    left: Union[ENAQueryClause, 'ENAQueryPair', QueryType]
-    right: Union[ENAQueryClause, 'ENAQueryPair', QueryType]
+    left: Union[ENAQueryClause, "ENAQueryPair", QueryType]
+    right: Union[ENAQueryClause, "ENAQueryPair", QueryType]
     is_not: bool = Field(default=False)
 
     def __str__(self):
         return f"{ENAQueryOperators.NOT + ' ' if self.is_not else ''}({str(self.left)} {self.operator.value} {str(self.right)})"
 
-    def __or__(self, other: Union[ENAQueryClause, 'ENAQueryPair', QueryType]) -> 'ENAQueryPair':
+    def __or__(
+        self, other: Union[ENAQueryClause, "ENAQueryPair", QueryType]
+    ) -> "ENAQueryPair":
         return ENAQueryPair(left=self, operator=ENAQueryOperators.OR, right=other)
 
-    def __and__(self, other: Union[ENAQueryClause, 'ENAQueryPair', QueryType]) -> 'ENAQueryPair':
+    def __and__(
+        self, other: Union[ENAQueryClause, "ENAQueryPair", QueryType]
+    ) -> "ENAQueryPair":
         return ENAQueryPair(left=self, operator=ENAQueryOperators.AND, right=other)
 
-    def __invert__(self) -> 'ENAQueryPair':
+    def __invert__(self) -> "ENAQueryPair":
         return ENAQueryPair(
             left=self.left,
             operator=self.operator,
@@ -54,8 +59,10 @@ class ENAQueryPair(BaseModel):
             is_not=not self.is_not,
         )
 
+
 class BaseENAQueryConditions(BaseModel):
     """Base class for all ENA query condition models"""
+
     is_not: bool = Field(default=False)
 
     @computed_field
@@ -76,12 +83,16 @@ class BaseENAQueryConditions(BaseModel):
     def __str__(self):
         return str(self.queries)
 
-    def __or__(self, other: Union[ENAQueryClause, ENAQueryPair, 'BaseENAQueryConditions']) -> ENAQueryPair:
+    def __or__(
+        self, other: Union[ENAQueryClause, ENAQueryPair, "BaseENAQueryConditions"]
+    ) -> ENAQueryPair:
         return ENAQueryPair(left=self, operator=ENAQueryOperators.OR, right=other)
 
-    def __and__(self, other: Union[ENAQueryClause, ENAQueryPair, 'BaseENAQueryConditions']) -> ENAQueryPair:
+    def __and__(
+        self, other: Union[ENAQueryClause, ENAQueryPair, "BaseENAQueryConditions"]
+    ) -> ENAQueryPair:
         return ENAQueryPair(left=self, operator=ENAQueryOperators.AND, right=other)
 
-    def __invert__(self) -> 'BaseENAQueryConditions':
+    def __invert__(self) -> "BaseENAQueryConditions":
         already_set = self.model_dump(exclude={"is_not"})
         return self.__class__(**already_set, is_not=not self.is_not)

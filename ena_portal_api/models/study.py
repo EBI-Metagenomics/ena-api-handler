@@ -5,6 +5,7 @@ from pydantic import Field
 
 from ..query.base import BaseENAQueryConditions
 
+
 class StudyFields(str, Enum):
     # from https://www.ebi.ac.uk/ena/portal/api/returnFields?dataPortal=metagenome&result=study 2025-01-23
     BREED = "breed"  # breed
@@ -40,6 +41,7 @@ class StudyFields(str, Enum):
     TAX_DIVISION = "tax_division"  # taxonomic division
     TAX_ID = "tax_id"  # NCBI taxonomic classification
     TAX_LINEAGE = "tax_lineage"  # Complete taxonomic lineage for an organism
+
 
 class StudyQuery(BaseENAQueryConditions):
     # From: https://www.ebi.ac.uk/ena/portal/api/searchFields?dataPortal=metagenome&result=study 2025/01/23

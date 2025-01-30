@@ -5,6 +5,7 @@ SINGLE_END_LIBRARY_LAYOUT = "SINGLE"
 PAIRED_END_LIBRARY_LAYOUT = "PAIRED"
 METAGENOME_SCIENTIFIC_NAME = "metagenome"
 
+
 class ENAPortalResultType(str, Enum):
     ANALYSIS = "analysis"
     ANALYSIS_STUDY = "analysis_study"
