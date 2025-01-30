@@ -1,19 +1,18 @@
-import importlib
 import logging
-import sys
-from typing import List, Literal, Optional, Type, TypeVar, Union, Tuple
+from typing import Literal, TypeVar
+
 import httpx
 from httpx import Auth, Response
 from pydantic import BaseModel, Field, field_serializer, model_validator
+
 from ena_portal_api.constants import ENAPortalResultType
-from ena_portal_api.models.read_run import ReadRunFields, ReadRunQuery
-from ena_portal_api.models.study import StudyFields, StudyQuery
+from ena_portal_api.models.read_run import ReadRunFields
+from ena_portal_api.models.study import StudyFields
 from ena_portal_api.query.base import BaseENAQueryConditions, ENAQueryClause, ENAQueryPair
 
 ENAQuerySetType = TypeVar("ENAQuerySetType", bound="_ENAQueryConditions")
 
 from typing import Type, Tuple, Union, List, Optional
-import sys
 import importlib
 
 
@@ -118,6 +117,12 @@ class ENAAPIRequest(BaseModel):
         # url = EMG_CONFIG.ena.portal_search_api
         url = "https://www.ebi.ac.uk/ena/portal/api/search"
         params = self.model_dump()
+        # output the contents of params
+        print('logging params')
+        logging.warning(params['query'])
+        if "None" in params['query']:
+            del params['query']
+        # logging.warning(params['query'])
         r = httpx.get(
             url=url,
             params=params,
