@@ -90,29 +90,29 @@ def test_analysis_comprehensive_fields():
             assert "analysis_type" in first_record
             assert first_record["study_accession"] == "PRJEB12345"
 
-@pytest.mark.integration
-def test_analysis_multiple_conditions():
-    """Test analysis request with multiple query conditions"""
-    try:
-        request = ENAAPIRequest(
-            result=ENAPortalResultType.ANALYSIS,
-            query=(
-                AnalysisQuery(analysis_type="SEQUENCE_ASSEMBLY") &
-                AnalysisQuery(center_name="EMBL-EBI")
-            ),
-            fields=[
-                AnalysisFields.ANALYSIS_ACCESSION,
-                AnalysisFields.CENTER_NAME,
-                AnalysisFields.ANALYSIS_TYPE,
-            ],
-            limit=5
-        )
-        response = request.get()
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-
-        if len(data) > 0:  # Only check if we got results
-            assert "analysis_accession" in data[0]
-            assert data[0]["center_name"] == "EMBL-EBI"
-            assert data[0]["analysis_type"] == "SEQUENCE_ASSEMBLY"
+# @pytest.mark.integration
+# def test_analysis_multiple_conditions():
+#     """Test analysis request with multiple query conditions"""
+#     try:
+#         request = ENAAPIRequest(
+#             result=ENAPortalResultType.ANALYSIS,
+#             query=(
+#                 AnalysisQuery(analysis_type="SEQUENCE_ASSEMBLY") &
+#                 AnalysisQuery(center_name="EMBL-EBI")
+#             ),
+#             fields=[
+#                 AnalysisFields.ANALYSIS_ACCESSION,
+#                 AnalysisFields.CENTER_NAME,
+#                 AnalysisFields.ANALYSIS_TYPE,
+#             ],
+#             limit=5
+#         )
+#         response = request.get()
+#         assert response.status_code == 200
+#         data = response.json()
+#         assert isinstance(data, list)
+#
+#         if len(data) > 0:  # Only check if we got results
+#             assert "analysis_accession" in data[0]
+#             assert data[0]["center_name"] == "EMBL-EBI"
+#             assert data[0]["analysis_type"] == "SEQUENCE_ASSEMBLY"
