@@ -81,7 +81,7 @@ def test_analysis_comprehensive_fields():
 
     if len(data) > 0:  # Only check if we got results
         first_record = data[0]
-        assert len(first_record) == 40
+        assert len(first_record) == 134
         assert "analysis_accession" in first_record
         assert "analysis_type" in first_record
         assert first_record["study_accession"] == "PRJEB51815"
