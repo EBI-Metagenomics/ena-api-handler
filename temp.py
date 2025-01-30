@@ -1,5 +1,5 @@
 # from ena_portal_api import EnaApiHandler
-from ena_portal_api.ena_api_requests import ENAAPIRequest, ENAPortalResultType, ENAStudyQuery, ENAStudyFields
+from ena_portal_api.ena_api_requests import ENAAPIRequest, ENAPortalResultType, StudyQuery, StudyFields
 from ena_portal_api.ena_handler import EnaApiHandler
 from ena_portal_api.models.read_run import ReadRunQuery, ReadRunFields
 
@@ -7,44 +7,44 @@ from ena_portal_api.models.read_run import ReadRunQuery, ReadRunFields
 # You can optionally provide username and password if you have API credentials
 ena_handler = EnaApiHandler()  # or EnaApiHandler(username="your_username", password="your_password")
 
-# try:
-#     request = ENAAPIRequest(
-#         result=ENAPortalResultType.STUDY,
-#         query=(
-#                   ENAStudyQuery(study_accession="PRJDA33427")
-#                   | ENAStudyQuery(secondary_study_accession="ERP1")
-#               ),
-#               # & ENAStudyQuery(tax_id="408170"),
-#         fields=[
-#             ENAStudyFields.STUDY_NAME,
-#             ENAStudyFields.STUDY_ACCESSION,
-#             ENAStudyFields.TAX_ID,
-#             ENAStudyFields.SECONDARY_STUDY_ACCESSION,
-#         ],
-#         # limit=10,
-#     )
-#     response = request.get()
-#     print(response.text)
-# except ValueError as e:
-#     print(f"Error fetching study: {e}")
-
 try:
     request = ENAAPIRequest(
-        result=ENAPortalResultType.READ_RUN,
+        result=ENAPortalResultType.STUDY,
+        query=(
+                  StudyQuery(study_accession="PRJDA33427")
+                  | StudyQuery(secondary_study_accession="ERP1")
+              ),
+              # & ENAStudyQuery(tax_id="408170"),
         fields=[
-            ReadRunFields.RUN_ACCESSION,
-            ReadRunFields.STUDY_ACCESSION,
-            ReadRunFields.LIBRARY_LAYOUT,
-            ReadRunFields.LIBRARY_SOURCE,
-            ReadRunFields.FASTQ_FTP,
-            ReadRunFields.READ_COUNT,
+            StudyFields.STUDY_NAME,
+            StudyFields.STUDY_ACCESSION,
+            StudyFields.TAX_ID,
+            StudyFields.SECONDARY_STUDY_ACCESSION,
         ],
-        limit=10
+        # limit=10,
     )
     response = request.get()
     print(response.text)
 except ValueError as e:
-    print(f"Error fetching read runs: {e}")
+    print(f"Error fetching study: {e}")
+
+# try:
+#     request = ENAAPIRequest(
+#         result=ENAPortalResultType.READ_RUN,
+#         fields=[
+#             ReadRunFields.RUN_ACCESSION,
+#             ReadRunFields.STUDY_ACCESSION,
+#             ReadRunFields.LIBRARY_LAYOUT,
+#             ReadRunFields.LIBRARY_SOURCE,
+#             ReadRunFields.FASTQ_FTP,
+#             ReadRunFields.READ_COUNT,
+#         ],
+#         limit=10
+#     )
+#     response = request.get()
+#     print(response.text)
+# except ValueError as e:
+#     print(f"Error fetching read runs: {e}")
 
 # try:
 #     request = ENAAPIRequest(
