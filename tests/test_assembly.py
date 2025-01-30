@@ -7,7 +7,6 @@ from ena_portal_api.ena_api_requests import ENAAPIRequest
 class AssemblyQuery:
     pass
 
-
 @pytest.mark.integration
 def test_assembly_fields_query():
     """Test assembly fields and query with real API request"""
