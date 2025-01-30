@@ -138,6 +138,7 @@ class ENAAPIRequest(BaseModel):
         logging.warning(r.request)
         return r
 
+    @staticmethod
     def create_ena_api_request(result_type, query, limit, fields, result_format="json"):
         return (
             # f"{EMG_CONFIG.ena.portal_search_api}?"
