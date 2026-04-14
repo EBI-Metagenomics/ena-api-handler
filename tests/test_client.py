@@ -170,6 +170,60 @@ def test_sync_context_manager_closes_on_exit() -> None:
     assert client._client is None
 
 
+def test_get_study_supports_secondary_accession_only() -> None:
+    client = ENAClient()
+    calls: list[dict[str, Any]] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs)
+        return [{"study_accession": "PRJEB1234"}]
+
+    client.search = fake_search  # type: ignore[method-assign]
+
+    result = client.get_study(secondary_accession="ERP1234")
+
+    assert result == {"study_accession": "PRJEB1234"}
+    assert len(calls) == 1
+    assert calls[0]["query"].to_query_string() == 'secondary_study_accession="ERP1234"'
+
+
+def test_get_study_prefers_study_level_results_over_runs() -> None:
+    client = ENAClient()
+    calls: list[Any] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["result"])
+        if kwargs["result"].value == "read_study":
+            return [{"study_accession": "PRJEB1234"}]
+        return [{"run_accession": "ERR1234"}]
+
+    client.search = fake_search  # type: ignore[method-assign]
+
+    result = client.get_study(primary_accession="PRJEB1234")
+
+    assert result == {"study_accession": "PRJEB1234"}
+    assert calls[0].value == "read_study"
+
+
+def test_get_study_runs_adds_library_strategy_when_filtering() -> None:
+    client = ENAClient()
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        field_values = [
+            field.value if hasattr(field, "value") else field
+            for field in (kwargs["fields"] or [])
+        ]
+        assert "run_accession" in field_values
+        assert "library_strategy" in field_values
+        return [{"run_accession": "ERR1234"}]
+
+    client.search = fake_search  # type: ignore[method-assign]
+
+    result = client.get_study_runs("PRJEB1234", fields=["run_accession"])
+
+    assert result == [{"run_accession": "ERR1234"}]
+
+
 # ── Async tests ───────────────────────────────────────────────────────────────
 
 
@@ -245,6 +299,42 @@ async def test_search_async_include_metagenomes_flag() -> None:
     )
     _, kwargs = mock_http.get.call_args
     assert kwargs["params"]["includeMetagenomes"] == "true"
+
+
+async def test_get_study_async_supports_secondary_accession_only() -> None:
+    client = ENAClient()
+    calls: list[dict[str, Any]] = []
+
+    async def fake_search_async(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs)
+        return [{"study_accession": "PRJEB1234"}]
+
+    client.search_async = fake_search_async  # type: ignore[method-assign]
+
+    result = await client.get_study_async(secondary_accession="ERP1234")
+
+    assert result == {"study_accession": "PRJEB1234"}
+    assert len(calls) == 1
+    assert calls[0]["query"].to_query_string() == 'secondary_study_accession="ERP1234"'
+
+
+async def test_get_study_runs_async_adds_library_strategy_when_filtering() -> None:
+    client = ENAClient()
+
+    async def fake_search_async(**kwargs: Any) -> list[dict[str, str]]:
+        field_values = [
+            field.value if hasattr(field, "value") else field
+            for field in (kwargs["fields"] or [])
+        ]
+        assert "run_accession" in field_values
+        assert "library_strategy" in field_values
+        return [{"run_accession": "ERR1234"}]
+
+    client.search_async = fake_search_async  # type: ignore[method-assign]
+
+    result = await client.get_study_runs_async("PRJEB1234", fields=["run_accession"])
+
+    assert result == [{"run_accession": "ERR1234"}]
 
 
 async def test_search_async_no_context_manager() -> None:

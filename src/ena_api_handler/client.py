@@ -364,7 +364,7 @@ class ENAClient:
 
     def get_study(
         self,
-        primary_accession: str,
+        primary_accession: str | None = None,
         secondary_accession: str | None = None,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
@@ -376,16 +376,24 @@ class ENAClient:
         """
         from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
 
-        query: ENABaseQuery | ENAQueryClause = ENARawQuery(
-            f'study_accession="{primary_accession}"'
-        )
-        if secondary_accession:
-            query = query | ENARawQuery(
-                f'secondary_study_accession="{secondary_accession}"'
+        if not primary_accession and not secondary_accession:
+            raise ValueError(
+                "Either primary_accession or secondary_accession must be provided"
             )
 
+        query_parts: list[ENAQueryClause] = []
+        if primary_accession:
+            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
+        if secondary_accession:
+            query_parts.append(
+                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
+            )
+
+        query: ENABaseQuery | ENAQueryClause = query_parts[0]
+        for part in query_parts[1:]:
+            query = query | part
+
         for result_type, aliases in [
-            (ENAPortalResultType.READ_RUN, None),
             (ENAPortalResultType.READ_STUDY, None),
             (ENAPortalResultType.ANALYSIS_STUDY, None),
             (
@@ -465,11 +473,21 @@ class ENAClient:
         query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
             f'secondary_study_accession="{study_accession}"'
         )
+        search_fields = list(fields) if fields is not None else None
+        if (
+            filter_assembly_runs
+            and search_fields is not None
+            and all(
+                (f.value if isinstance(f, Enum) else f) != "library_strategy"
+                for f in search_fields
+            )
+        ):
+            search_fields.append("library_strategy")
         exclude = {"library_strategy": "AMPLICON"} if filter_assembly_runs else None
         rows = self.search(
             result=ENAPortalResultType.READ_RUN,
             query=query,
-            fields=fields,
+            fields=search_fields,
             portals=_CONVENIENCE_PORTALS,
             exclude=exclude,
             limit=0,
@@ -627,7 +645,7 @@ class ENAClient:
 
     async def get_study_async(
         self,
-        primary_accession: str,
+        primary_accession: str | None = None,
         secondary_accession: str | None = None,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
@@ -639,16 +657,24 @@ class ENAClient:
         """
         from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
 
-        query: ENABaseQuery | ENAQueryClause = ENARawQuery(
-            f'study_accession="{primary_accession}"'
-        )
-        if secondary_accession:
-            query = query | ENARawQuery(
-                f'secondary_study_accession="{secondary_accession}"'
+        if not primary_accession and not secondary_accession:
+            raise ValueError(
+                "Either primary_accession or secondary_accession must be provided"
             )
 
+        query_parts: list[ENAQueryClause] = []
+        if primary_accession:
+            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
+        if secondary_accession:
+            query_parts.append(
+                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
+            )
+
+        query: ENABaseQuery | ENAQueryClause = query_parts[0]
+        for part in query_parts[1:]:
+            query = query | part
+
         for result_type, aliases in [
-            (ENAPortalResultType.READ_RUN, None),
             (ENAPortalResultType.READ_STUDY, None),
             (ENAPortalResultType.ANALYSIS_STUDY, None),
             (
@@ -728,11 +754,21 @@ class ENAClient:
         query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
             f'secondary_study_accession="{study_accession}"'
         )
+        search_fields = list(fields) if fields is not None else None
+        if (
+            filter_assembly_runs
+            and search_fields is not None
+            and all(
+                (f.value if isinstance(f, Enum) else f) != "library_strategy"
+                for f in search_fields
+            )
+        ):
+            search_fields.append("library_strategy")
         exclude = {"library_strategy": "AMPLICON"} if filter_assembly_runs else None
         rows = await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=query,
-            fields=fields,
+            fields=search_fields,
             portals=_CONVENIENCE_PORTALS,
             exclude=exclude,
             limit=0,
