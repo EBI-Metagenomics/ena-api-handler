@@ -1,0 +1,402 @@
+[
+  {
+    "columnId": "accession",
+    "description": "accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "allele",
+    "description": "name of the allele for the given gene",
+    "type": "text"
+  },
+  {
+    "columnId": "altitude",
+    "description": "Altitude (m)",
+    "type": "number"
+  },
+  {
+    "columnId": "artificial_location",
+    "description": "indicates location is modified to adjust for the presence of a frameshift or internal stop codon",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "base_count",
+    "description": "number of base pairs",
+    "type": "number"
+  },
+  {
+    "columnId": "bio_material",
+    "description": "identifier for biological material including institute and collection code",
+    "type": "text"
+  },
+  {
+    "columnId": "cell_line",
+    "description": "cell line from which the sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "cell_type",
+    "description": "cell type from which the sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "codon_start",
+    "description": "indicates the offset of the first complete codon relative to the first base of the coding feature",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "collected_by",
+    "description": "name of the person who collected the specimen",
+    "type": "text"
+  },
+  {
+    "columnId": "collection_date",
+    "description": "Time when specimen was collected",
+    "type": "date"
+  },
+  {
+    "columnId": "collection_date_end",
+    "description": "Time when specimen was collected",
+    "type": "date"
+  },
+  {
+    "columnId": "collection_date_start",
+    "description": "Time when specimen was collected",
+    "type": "date"
+  },
+  {
+    "columnId": "country",
+    "description": "locality of sample isolation: country names, oceans or seas, followed by regions and localities",
+    "type": "text"
+  },
+  {
+    "columnId": "cultivar",
+    "description": "cultivar (cultivated variety) of plant from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "culture_collection",
+    "description": "identifier for the sample culture including institute and collection code",
+    "type": "text"
+  },
+  {
+    "columnId": "dataclass",
+    "description": "sequence data class",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "description",
+    "description": "brief sequence description",
+    "type": "text"
+  },
+  {
+    "columnId": "dev_stage",
+    "description": "sample obtained from an organism in a specific developmental stage",
+    "type": "text"
+  },
+  {
+    "columnId": "ec_number",
+    "description": "Enzyme Commission number for enzyme product of sequence",
+    "type": "text"
+  },
+  {
+    "columnId": "ecotype",
+    "description": "a population within a given species displaying traits that reflect adaptation to a local habitat",
+    "type": "text"
+  },
+  {
+    "columnId": "environmental_sample",
+    "description": "identifies sequences derived by direct molecular isolation from an environmental DNA sample",
+    "type": "boolean"
+  },
+  {
+    "columnId": "exception",
+    "description": "indicates that the coding region cannot be translated using standard biological rules",
+    "type": "text"
+  },
+  {
+    "columnId": "experiment",
+    "description": "a brief description of the nature of the experimental evidence",
+    "type": "text"
+  },
+  {
+    "columnId": "first_public",
+    "description": "date when made public",
+    "type": "date"
+  },
+  {
+    "columnId": "function",
+    "description": "function attributed to a sequence",
+    "type": "text"
+  },
+  {
+    "columnId": "gene",
+    "description": "symbol of the gene corresponding to a sequence region",
+    "type": "text"
+  },
+  {
+    "columnId": "gene_synonym",
+    "description": "synonymous, replaced, obsolete or former gene symbol",
+    "type": "text"
+  },
+  {
+    "columnId": "germline",
+    "description": "the sample is an unrearranged molecule that was inherited from the parental germline",
+    "type": "boolean"
+  },
+  {
+    "columnId": "haplotype",
+    "description": "combination of alleles that are linked together on the same physical chromosome",
+    "type": "text"
+  },
+  {
+    "columnId": "host",
+    "description": "natural (as opposed to laboratory) host to the organism from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "identified_by",
+    "description": "name of the taxonomist who identified the specimen",
+    "type": "text"
+  },
+  {
+    "columnId": "indexed_date",
+    "description": "date when record was indexed for presentation",
+    "type": "date"
+  },
+  {
+    "columnId": "inference",
+    "description": "a structured description of non-experimental evidence",
+    "type": "text"
+  },
+  {
+    "columnId": "isolate",
+    "description": "individual isolate from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "isolation_source",
+    "description": "describes the physical, environmental and/or local geographical source of the sample",
+    "type": "text"
+  },
+  {
+    "columnId": "keywords",
+    "description": "keywords associated with sequence",
+    "type": "text"
+  },
+  {
+    "columnId": "lab_host",
+    "description": "scientific name of the laboratory host used to propagate the source organism for the sample",
+    "type": "text"
+  },
+  {
+    "columnId": "last_updated",
+    "description": "date when last updated",
+    "type": "date"
+  },
+  {
+    "columnId": "location",
+    "description": "geographic location of isolation of the sample",
+    "type": "latlon"
+  },
+  {
+    "columnId": "locus_tag",
+    "description": "a submitter-supplied, systematic, stable identifier for a gene and its associated features",
+    "type": "text"
+  },
+  {
+    "columnId": "map",
+    "description": "genomic map position of feature",
+    "type": "text"
+  },
+  {
+    "columnId": "marker",
+    "description": "marker classification",
+    "type": "indexed"
+  },
+  {
+    "columnId": "mating_type",
+    "description": "mating type of the organism from which the sequence was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "mol_type",
+    "description": "in vivo molecule type of the sequence",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "old_locus_tag",
+    "description": "deprecated submitter-supplied, systematic, stable identifier for a gene and its associated features",
+    "type": "text"
+  },
+  {
+    "columnId": "operon",
+    "description": "name of the group of contiguous genes transcribed into a single transcript",
+    "type": "text"
+  },
+  {
+    "columnId": "organelle",
+    "description": "membrane-bound intracellular structure from which the sequence was obtained",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "parent_accession",
+    "description": "parent sequence accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "plasmid",
+    "description": "name of naturally occurring plasmid from which the sequence was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "product",
+    "description": "name of the product associated with the feature",
+    "type": "text"
+  },
+  {
+    "columnId": "protein_id",
+    "description": "a stable protein identifier issued by INSDC",
+    "type": "text"
+  },
+  {
+    "columnId": "pseudo",
+    "description": "the feature is non-functional",
+    "type": "boolean"
+  },
+  {
+    "columnId": "pseudo_gene",
+    "description": "indicates that this feature is a pseudogene",
+    "type": "text"
+  },
+  {
+    "columnId": "ribosomal_slippage",
+    "description": "indicates ribosomal slippage (change to an alternative reading frame) during protein translation",
+    "type": "boolean"
+  },
+  {
+    "columnId": "sample_accession",
+    "description": "sample accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "scientific_name",
+    "description": "scientific name of an organism",
+    "type": "text"
+  },
+  {
+    "columnId": "sequence_md5",
+    "description": "MD5 checksum of sequence",
+    "type": "text"
+  },
+  {
+    "columnId": "sequence_version",
+    "description": "Version of the sequence",
+    "type": "number"
+  },
+  {
+    "columnId": "serotype",
+    "description": "serological variety of a species characterized by its antigenic properties",
+    "type": "text"
+  },
+  {
+    "columnId": "serovar",
+    "description": "serological variety of a species (usually a prokaryote) characterized by its antigenic properties",
+    "type": "text"
+  },
+  {
+    "columnId": "sex",
+    "description": "sex of the organism from which the sample was obtained",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "specimen_voucher",
+    "description": "identifier for the sample culture including institute and collection code",
+    "type": "text"
+  },
+  {
+    "columnId": "standard_name",
+    "description": "accepted standard name for a feature",
+    "type": "text"
+  },
+  {
+    "columnId": "status",
+    "description": "Status",
+    "type": "number"
+  },
+  {
+    "columnId": "strain",
+    "description": "strain from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "study_accession",
+    "description": "study accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "sub_species",
+    "description": "name of sub-species of organism from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "sub_strain",
+    "description": "name or identifier of a genetically or otherwise modified strain from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "tag",
+    "description": "Classification Tags",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_division",
+    "description": "taxonomic division",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_id",
+    "description": "NCBI taxonomic classification",
+    "type": "taxonomy"
+  },
+  {
+    "columnId": "tax_lineage",
+    "description": "Complete taxonomic lineage for an organism",
+    "type": "text"
+  },
+  {
+    "columnId": "tissue_lib",
+    "description": "tissue library from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "tissue_type",
+    "description": "tissue type from which the sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "topology",
+    "description": "sequence topology: circular or linear",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "trans_splicing",
+    "description": "indicates exons from two RNA molecules are ligated in intermolecular reaction to form mature RNA",
+    "type": "boolean"
+  },
+  {
+    "columnId": "transl_except",
+    "description": "a single codon translation that does not conform to genetic code",
+    "type": "text"
+  },
+  {
+    "columnId": "transl_table",
+    "description": "indicates the genetic code table used if other than universal genetic code table",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "variety",
+    "description": "variety (varietas, a formal Linnaean rank) of organism from which sample was derived",
+    "type": "text"
+  }
+]

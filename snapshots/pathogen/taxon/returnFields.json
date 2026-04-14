@@ -1,0 +1,77 @@
+[
+  {
+    "columnId": "authority",
+    "description": "taxonomic authority",
+    "type": "text"
+  },
+  {
+    "columnId": "common_name",
+    "description": "Everyday name for an organism",
+    "type": "text"
+  },
+  {
+    "columnId": "description",
+    "description": "brief sequence description",
+    "type": "text"
+  },
+  {
+    "columnId": "genbank_common_name",
+    "description": "Everyday name for an organism in GenBank",
+    "type": "text"
+  },
+  {
+    "columnId": "genetic_code",
+    "description": "Set of rules that determine sequence translation",
+    "type": "number"
+  },
+  {
+    "columnId": "lineage",
+    "description": "names representing hierarchical classification of an organism ",
+    "type": "text"
+  },
+  {
+    "columnId": "merged_tax_id",
+    "description": "Old tax ids merged to this tax id",
+    "type": "number"
+  },
+  {
+    "columnId": "rank",
+    "description": "Relative level of a group of organisms in an ancestral hierarchy.",
+    "type": "text"
+  },
+  {
+    "columnId": "scientific_name",
+    "description": "scientific name of an organism",
+    "type": "text"
+  },
+  {
+    "columnId": "status",
+    "description": "Status",
+    "type": "number"
+  },
+  {
+    "columnId": "synonym",
+    "description": "Synonyms for taxon",
+    "type": "text"
+  },
+  {
+    "columnId": "tag",
+    "description": "Classification Tags",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_division",
+    "description": "taxonomic division",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_id",
+    "description": "NCBI taxonomic classification",
+    "type": "taxonomy"
+  },
+  {
+    "columnId": "tax_lineage",
+    "description": "Complete taxonomic lineage for an organism",
+    "type": "text"
+  }
+]
