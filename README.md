@@ -53,6 +53,14 @@ from ena_api_handler import ENAClient
 client = ENAClient(username="your-username", password="your-password")
 ```
 
+## Examples
+
+The [`examples/`](examples/) folder has runnable scripts covering every use
+case in this README: searching, query composition, all convenience methods,
+async usage, result handling, field coercion/aliasing/filtering, and error
+handling (including validation errors). See [`examples/README.md`](examples/README.md)
+for the full index and how to run them.
+
 ## Quick Start
 
 ### Search for runs in a study
@@ -525,6 +533,11 @@ The low-level search methods support a few useful response-processing controls.
 ### Field coercion
 
 By default the client coerces some numeric-looking string fields, such as `base_count` and `read_count`, into integers.
+
+Coercion is applied via `model_copy()` after validation, so it doesn't change the model's
+declared field type. Type checkers (mypy/pyright) will still see the original declared type
+(e.g. `Optional[str]`) for a coerced field — use `typing.cast()` if you need an accurate
+static type for the coerced value.
 
 Disable that behavior if you want raw API values:
 

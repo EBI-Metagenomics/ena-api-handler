@@ -18,4 +18,4 @@ repos:
         additional_dependencies:
           [pydantic>=2.12.5, httpx>=0.28.1, pytest>=8, pytest-asyncio>=0.24]
         pass_filenames: false
-        args: [src, tests]
+        args: [src, tests, examples]
