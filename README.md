@@ -446,6 +446,11 @@ Example:
 updated_runs = client.get_updated_runs("2024-01-01")
 ```
 
+These pass `limit=0` internally, which fetches *all* matching results (see
+[Searching](#searching)). A broad cutoff date can match a large fraction of
+ENA's archive and take a long time to download, so prefer a recent date
+for incremental syncs.
+
 ## Async Usage
 
 The async API mirrors the sync API closely.

@@ -3,9 +3,17 @@
 Run with: uv run python examples/04_convenience_methods.py
 """
 
+from datetime import date, timedelta
+
 import httpx
 
 from ena_api_handler import ENAAvailability, ENAClient
+
+# get_updated_* helpers pass limit=0, which means "return everything matching"
+# (see ENAClient.search). A broad date range like "2024-01-01" matches most of
+# ENA's archive and can take a very long time to download, so use a narrow,
+# recent window here.
+recent_cutoff = (date.today() - timedelta(days=2)).isoformat()
 
 with ENAClient() as client:
     study_by_primary = client.get_study(primary_accession="PRJEB1787")
@@ -70,12 +78,12 @@ with ENAClient() as client:
     if assembly_from_sample is not None:
         print(assembly_from_sample.analysis_accession)
 
-    updated_studies = client.get_updated_studies("2024-01-01")
-    updated_runs = client.get_updated_runs("2024-01-01")
-    updated_assemblies = client.get_updated_assemblies("2024-01-01")
-    updated_tpa_assemblies = client.get_updated_tpa_assemblies("2024-01-01")
+    updated_studies = client.get_updated_studies(recent_cutoff)
+    updated_runs = client.get_updated_runs(recent_cutoff)
+    updated_assemblies = client.get_updated_assemblies(recent_cutoff)
+    updated_tpa_assemblies = client.get_updated_tpa_assemblies(recent_cutoff)
     print(
-        f"updated since 2024-01-01: {len(updated_studies)} studies, "
+        f"updated since {recent_cutoff}: {len(updated_studies)} studies, "
         f"{len(updated_runs)} runs, {len(updated_assemblies)} assemblies, "
         f"{len(updated_tpa_assemblies)} TPA assemblies"
     )
