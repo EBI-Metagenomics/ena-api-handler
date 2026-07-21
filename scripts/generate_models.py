@@ -23,6 +23,7 @@ import argparse
 import asyncio
 import json
 import logging
+import subprocess
 from pathlib import Path
 
 import httpx
@@ -728,6 +729,13 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
     return "\n".join(lines)
 
 
+def run_ruff(paths: list[Path]) -> None:
+    """Lint-fix and format generated files in place."""
+    log.info("Running ruff check --fix and ruff format...")
+    subprocess.run(["ruff", "check", "--fix", *map(str, paths)], check=True)
+    subprocess.run(["ruff", "format", *map(str, paths)], check=True)
+
+
 def run_generate(
     portals: list[str],
     all_result_types: list[str],
@@ -788,6 +796,9 @@ def run_generate(
         CLIENT_STUB_PATH.parent.mkdir(parents=True, exist_ok=True)
         CLIENT_STUB_PATH.write_text(client_stub_content, encoding="utf-8")
         log.info("  wrote %s", CLIENT_STUB_PATH.relative_to(REPO_ROOT))
+
+    if not dry_run:
+        run_ruff([MODELS_DIR, CLIENT_STUB_PATH])
 
     total = sum(len(v) for v in portal_results.values())
     log.info(
