@@ -231,6 +231,26 @@ def test_generate_models_init_result_models_registry() -> None:
     )
 
 
+def test_generate_models_init_fields_and_query_registries() -> None:
+    source = gm.generate_models_init(
+        portals=["ena"],
+        all_result_types=["read_run"],
+        portal_results={"ena": ["read_run"]},
+    )
+    assert "FIELDS_MODELS: dict[" in source
+    assert (
+        "(ENAPortalDataPortal.ENA, ENAPortalResultType.READ_RUN): ENAReadRunFields,"
+        in source
+    )
+    assert "QUERY_MODELS: dict[" in source
+    assert (
+        "(ENAPortalDataPortal.ENA, ENAPortalResultType.READ_RUN): ENAReadRunQuery,"
+        in source
+    )
+    assert '"FIELDS_MODELS",' in source
+    assert '"QUERY_MODELS",' in source
+
+
 # ── generate_client_stub ──────────────────────────────────────────────────────
 
 _STUB_PORTAL_RESULTS = {
@@ -270,6 +290,15 @@ def test_generate_client_stub_search_fallback_overload() -> None:
     source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
     assert "query: ENABaseQuery | ENAQueryClause,\n" in source
     assert source.count("-> list[BaseModel]: ...") == 2  # search + search_async
+
+
+def test_generate_client_stub_check_study_availability_present() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert "def check_study_availability(" in source
+    assert "async def check_study_availability_async(" in source
+    assert "auth: httpx.Auth,\n" in source
+    assert source.count("-> ENAAvailability: ...") == 2
+    assert "ENAAvailability" in source
 
 
 def test_generate_client_stub_search_async_present() -> None:

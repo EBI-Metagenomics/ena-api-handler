@@ -6,3 +6,9 @@ class ENAPortalDataPortal(str, Enum):
     FAANG = "faang"
     METAGENOME = "metagenome"
     PATHOGEN = "pathogen"
+
+
+class ENAAvailability(str, Enum):
+    PUBLIC = "public"
+    PRIVATE = "private"
+    SUPPRESSED = "suppressed"

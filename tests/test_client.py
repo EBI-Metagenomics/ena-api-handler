@@ -5,6 +5,7 @@ All HTTP calls are mocked — no network required.
 
 from __future__ import annotations
 
+from enum import Enum
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
@@ -14,9 +15,9 @@ from pydantic import BaseModel
 
 from ena_api_handler import ENAClient, ENAClientError
 from ena_api_handler._processing import compute_raw_data_size
-from ena_api_handler.client import ENAAvailabilityError
+from ena_api_handler.client import ENAAvailabilityError, ENAQueryValidationError
 from ena_api_handler.query import ENABaseQuery
-from ena_api_handler.types import ENAPortalDataPortal
+from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -67,6 +68,20 @@ def _result_type():
     from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
 
     return ENAPortalResultType.READ_RUN
+
+
+@pytest.fixture(autouse=True)
+def _no_type_validation_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Most tests here use the hand-written `_Q` test double, which doesn't match
+    any real generated Query class. Clear the validation registries by default
+    so fields/query type validation doesn't interfere; tests that specifically
+    exercise validation monkeypatch these registries themselves.
+    """
+    import ena_api_handler.models as models  # noqa: PLC0415
+
+    monkeypatch.setattr(models, "QUERY_MODELS", {}, raising=False)
+    monkeypatch.setattr(models, "FIELDS_MODELS", {}, raising=False)
 
 
 # ── Sync tests ────────────────────────────────────────────────────────────────
@@ -204,6 +219,64 @@ def test_get_study_prefers_study_level_results_over_runs() -> None:
 
     assert result == {"study_accession": "PRJEB1234"}
     assert calls[0].value == "read_study"
+
+
+def test_check_study_availability_public_when_unauthenticated_probe_hits() -> None:
+    client = ENAClient()
+    calls: list[Any] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["auth"])
+        return [{"study_accession": "PRJEB1234"}]
+
+    client.search = fake_search  # type: ignore[assignment]
+
+    availability = client.check_study_availability(
+        primary_accession="PRJEB1234", auth=httpx.BasicAuth("u", "p")
+    )
+
+    assert availability == ENAAvailability.PUBLIC
+    assert calls == [None]  # only the unauthenticated probe was made
+
+
+def test_check_study_availability_private_when_only_authenticated_probe_hits() -> None:
+    client = ENAClient()
+    auth = httpx.BasicAuth("u", "p")
+    calls: list[Any] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["auth"])
+        return [{"study_accession": "PRJEB1234"}] if kwargs["auth"] is auth else []
+
+    client.search = fake_search  # type: ignore[assignment]
+
+    availability = client.check_study_availability(
+        primary_accession="PRJEB1234", auth=auth
+    )
+
+    assert availability == ENAAvailability.PRIVATE
+    assert auth in calls
+
+
+def test_check_study_availability_suppressed_when_both_probes_empty() -> None:
+    client = ENAClient()
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        return []
+
+    client.search = fake_search  # type: ignore[assignment]
+
+    availability = client.check_study_availability(
+        primary_accession="PRJEB1234", auth=httpx.BasicAuth("u", "p")
+    )
+
+    assert availability == ENAAvailability.SUPPRESSED
+
+
+def test_check_study_availability_requires_an_accession() -> None:
+    client = ENAClient()
+    with pytest.raises(ValueError):
+        client.check_study_availability(auth=httpx.BasicAuth("u", "p"))
 
 
 def test_get_study_runs_adds_library_strategy_when_filtering() -> None:
@@ -359,6 +432,64 @@ async def test_get_study_async_supports_secondary_accession_only() -> None:
     assert result == {"study_accession": "PRJEB1234"}
     assert len(calls) == 1
     assert calls[0]["query"].to_query_string() == 'secondary_study_accession="ERP1234"'
+
+
+async def test_check_study_availability_async_public_when_unauthenticated_probe_hits() -> (
+    None
+):
+    client = ENAClient()
+    calls: list[Any] = []
+
+    async def fake_search_async(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["auth"])
+        return [{"study_accession": "PRJEB1234"}]
+
+    client.search_async = fake_search_async  # type: ignore[assignment]
+
+    availability = await client.check_study_availability_async(
+        primary_accession="PRJEB1234", auth=httpx.BasicAuth("u", "p")
+    )
+
+    assert availability == ENAAvailability.PUBLIC
+    assert calls == [None]
+
+
+async def test_check_study_availability_async_private_when_only_authenticated_probe_hits() -> (
+    None
+):
+    client = ENAClient()
+    auth = httpx.BasicAuth("u", "p")
+    calls: list[Any] = []
+
+    async def fake_search_async(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["auth"])
+        return [{"study_accession": "PRJEB1234"}] if kwargs["auth"] is auth else []
+
+    client.search_async = fake_search_async  # type: ignore[assignment]
+
+    availability = await client.check_study_availability_async(
+        primary_accession="PRJEB1234", auth=auth
+    )
+
+    assert availability == ENAAvailability.PRIVATE
+    assert auth in calls
+
+
+async def test_check_study_availability_async_suppressed_when_both_probes_empty() -> (
+    None
+):
+    client = ENAClient()
+
+    async def fake_search_async(**kwargs: Any) -> list[dict[str, str]]:
+        return []
+
+    client.search_async = fake_search_async  # type: ignore[assignment]
+
+    availability = await client.check_study_availability_async(
+        primary_accession="PRJEB1234", auth=httpx.BasicAuth("u", "p")
+    )
+
+    assert availability == ENAAvailability.SUPPRESSED
 
 
 async def test_get_study_runs_async_adds_library_strategy_when_filtering() -> None:
@@ -532,6 +663,124 @@ def test_raise_on_empty_raises_availability_error() -> None:
             query=_Q(),
             raise_on_empty=True,
         )
+
+
+# ── Fields/query type validation ────────────────────────────────────────────────
+
+
+class _OtherQ(ENABaseQuery):
+    """A second minimal query double, standing in for a different portal's type."""
+
+    run_accession: str | None = None
+
+
+class _Fields(str, Enum):
+    STUDY_ACCESSION = "study_accession"
+
+
+class _OtherFields(str, Enum):
+    RUN_ACCESSION = "run_accession"
+
+
+def _patch_registries(
+    monkeypatch: pytest.MonkeyPatch,
+    query_models: dict | None = None,
+    fields_models: dict | None = None,
+) -> None:
+    import ena_api_handler.models as models  # noqa: PLC0415
+
+    monkeypatch.setattr(models, "QUERY_MODELS", query_models or {}, raising=False)
+    monkeypatch.setattr(models, "FIELDS_MODELS", fields_models or {}, raising=False)
+
+
+def test_matching_typed_query_and_fields_pass_through(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_registries(
+        monkeypatch,
+        query_models={(ENAPortalDataPortal.ENA, _result_type()): _Q},
+        fields_models={(ENAPortalDataPortal.ENA, _result_type()): _Fields},
+    )
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{}])
+
+    results = client.search(
+        result=_result_type(),
+        query=_Q(study_accession="PRJEB1234"),
+        fields=[_Fields.STUDY_ACCESSION],
+        portals=(ENAPortalDataPortal.ENA,),
+    )
+
+    assert len(results) == 1
+
+
+def test_mismatched_typed_query_raises_validation_error_without_http_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_registries(
+        monkeypatch,
+        query_models={(ENAPortalDataPortal.ENA, _result_type()): _OtherQ},
+    )
+    client = ENAClient()
+    mock_http = _make_sync_mock(200, [{}])
+    client._client = mock_http
+
+    with pytest.raises(ENAQueryValidationError):
+        client.search(
+            result=_result_type(),
+            query=_Q(study_accession="PRJEB1234"),
+            portals=(ENAPortalDataPortal.ENA,),
+        )
+    mock_http.get.assert_not_called()
+
+
+def test_multi_portal_skips_non_matching_portal_silently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only ENA's registered Query class matches _Q; METAGENOME is skipped, not queried."""
+    _patch_registries(
+        monkeypatch,
+        query_models={
+            (ENAPortalDataPortal.METAGENOME, _result_type()): _OtherQ,
+            (ENAPortalDataPortal.ENA, _result_type()): _Q,
+        },
+    )
+    client = ENAClient()
+    mock_http = _make_sync_mock(200, [{}])
+    client._client = mock_http
+
+    results = client.search(
+        result=_result_type(),
+        query=_Q(study_accession="PRJEB1234"),
+        portals=(ENAPortalDataPortal.METAGENOME, ENAPortalDataPortal.ENA),
+    )
+
+    assert len(results) == 1
+    assert mock_http.get.call_count == 1
+
+
+def test_raw_query_and_plain_string_fields_never_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ENARawQuery/plain field strings are exempt from validation regardless of registry."""
+    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
+
+    _patch_registries(
+        monkeypatch,
+        query_models={(ENAPortalDataPortal.ENA, _result_type()): _OtherQ},
+        fields_models={(ENAPortalDataPortal.ENA, _result_type()): _OtherFields},
+    )
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{}])
+
+    results = client.search(
+        result=_result_type(),
+        query=ENARawQuery('study_accession="PRJEB1234"'),
+        fields=["study_accession"],
+        portals=(ENAPortalDataPortal.ENA,),
+    )
+
+    assert len(results) == 1
 
 
 # ── Post-processing ────────────────────────────────────────────────────────────

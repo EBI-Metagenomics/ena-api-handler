@@ -132,10 +132,11 @@ from ena_api_handler.models import (
     PathogenWgsSetResult,
 )
 from ena_api_handler.query import ENABaseQuery, ENAQueryClause
-from ena_api_handler.types import ENAPortalDataPortal
+from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 
 class ENAClientError(Exception): ...
 class ENAAvailabilityError(ENAClientError): ...
+class ENAQueryValidationError(ENAClientError): ...
 
 class ENAClient:
     _url: str
@@ -2062,6 +2063,13 @@ class ENAClient:
         cutoff_date: str,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
+    def check_study_availability(
+        self,
+        primary_accession: str | None = ...,
+        secondary_accession: str | None = ...,
+        *,
+        auth: httpx.Auth,
+    ) -> ENAAvailability: ...
     async def get_study_async(
         self,
         primary_accession: str | None = ...,
@@ -2135,3 +2143,10 @@ class ENAClient:
         cutoff_date: str,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
+    async def check_study_availability_async(
+        self,
+        primary_accession: str | None = ...,
+        secondary_accession: str | None = ...,
+        *,
+        auth: httpx.Auth,
+    ) -> ENAAvailability: ...

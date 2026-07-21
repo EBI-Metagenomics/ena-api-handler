@@ -5,6 +5,7 @@ from enum import Enum
 
 from pydantic import BaseModel
 
+from ena_api_handler.query import ENABaseQuery
 from ena_api_handler.types import ENAPortalDataPortal
 
 from ena_api_handler.models.ena import (
@@ -354,9 +355,270 @@ RESULT_MODELS: dict[
     (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.WGS_SET): PathogenWgsSetResult,
 }
 
+
+FIELDS_MODELS: dict[tuple[ENAPortalDataPortal, ENAPortalResultType], type[Enum]] = {
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.ANALYSIS): ENAAnalysisFields,
+    (
+        ENAPortalDataPortal.ENA,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): ENAAnalysisStudyFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.ASSEMBLY): ENAAssemblyFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.CODING): ENACodingFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.NONCODING): ENANoncodingFields,
+    (
+        ENAPortalDataPortal.ENA,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): ENAReadExperimentFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.READ_RUN): ENAReadRunFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.READ_STUDY): ENAReadStudyFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.SAMPLE): ENASampleFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.SEQUENCE): ENASequenceFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.STUDY): ENAStudyFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TAXON): ENATaxonFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TLS_SET): ENATlsSetFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TSA_SET): ENATsaSetFields,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.WGS_SET): ENAWgsSetFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.ANALYSIS): FAANGAnalysisFields,
+    (
+        ENAPortalDataPortal.FAANG,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): FAANGAnalysisStudyFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.ASSEMBLY): FAANGAssemblyFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.CODING): FAANGCodingFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.NONCODING): FAANGNoncodingFields,
+    (
+        ENAPortalDataPortal.FAANG,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): FAANGReadExperimentFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.READ_RUN): FAANGReadRunFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.READ_STUDY): FAANGReadStudyFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.SAMPLE): FAANGSampleFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.SEQUENCE): FAANGSequenceFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.STUDY): FAANGStudyFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TAXON): FAANGTaxonFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TLS_SET): FAANGTlsSetFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TSA_SET): FAANGTsaSetFields,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.WGS_SET): FAANGWgsSetFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ANALYSIS,
+    ): MetagenomeAnalysisFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): MetagenomeAnalysisStudyFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ASSEMBLY,
+    ): MetagenomeAssemblyFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.CODING,
+    ): MetagenomeCodingFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.NONCODING,
+    ): MetagenomeNoncodingFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): MetagenomeReadExperimentFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_RUN,
+    ): MetagenomeReadRunFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_STUDY,
+    ): MetagenomeReadStudyFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.SAMPLE,
+    ): MetagenomeSampleFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.SEQUENCE,
+    ): MetagenomeSequenceFields,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.STUDY): MetagenomeStudyFields,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.TAXON): MetagenomeTaxonFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.TLS_SET,
+    ): MetagenomeTlsSetFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.TSA_SET,
+    ): MetagenomeTsaSetFields,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.WGS_SET,
+    ): MetagenomeWgsSetFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.ANALYSIS,
+    ): PathogenAnalysisFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): PathogenAnalysisStudyFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.ASSEMBLY,
+    ): PathogenAssemblyFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.CODING): PathogenCodingFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.NONCODING,
+    ): PathogenNoncodingFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): PathogenReadExperimentFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.READ_RUN): PathogenReadRunFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.READ_STUDY,
+    ): PathogenReadStudyFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.SAMPLE): PathogenSampleFields,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.SEQUENCE,
+    ): PathogenSequenceFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.STUDY): PathogenStudyFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TAXON): PathogenTaxonFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TLS_SET): PathogenTlsSetFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TSA_SET): PathogenTsaSetFields,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.WGS_SET): PathogenWgsSetFields,
+}
+
+
+QUERY_MODELS: dict[
+    tuple[ENAPortalDataPortal, ENAPortalResultType], type[ENABaseQuery]
+] = {
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.ANALYSIS): ENAAnalysisQuery,
+    (
+        ENAPortalDataPortal.ENA,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): ENAAnalysisStudyQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.ASSEMBLY): ENAAssemblyQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.CODING): ENACodingQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.NONCODING): ENANoncodingQuery,
+    (
+        ENAPortalDataPortal.ENA,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): ENAReadExperimentQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.READ_RUN): ENAReadRunQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.READ_STUDY): ENAReadStudyQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.SAMPLE): ENASampleQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.SEQUENCE): ENASequenceQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.STUDY): ENAStudyQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TAXON): ENATaxonQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TLS_SET): ENATlsSetQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.TSA_SET): ENATsaSetQuery,
+    (ENAPortalDataPortal.ENA, ENAPortalResultType.WGS_SET): ENAWgsSetQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.ANALYSIS): FAANGAnalysisQuery,
+    (
+        ENAPortalDataPortal.FAANG,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): FAANGAnalysisStudyQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.ASSEMBLY): FAANGAssemblyQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.CODING): FAANGCodingQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.NONCODING): FAANGNoncodingQuery,
+    (
+        ENAPortalDataPortal.FAANG,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): FAANGReadExperimentQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.READ_RUN): FAANGReadRunQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.READ_STUDY): FAANGReadStudyQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.SAMPLE): FAANGSampleQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.SEQUENCE): FAANGSequenceQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.STUDY): FAANGStudyQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TAXON): FAANGTaxonQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TLS_SET): FAANGTlsSetQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.TSA_SET): FAANGTsaSetQuery,
+    (ENAPortalDataPortal.FAANG, ENAPortalResultType.WGS_SET): FAANGWgsSetQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ANALYSIS,
+    ): MetagenomeAnalysisQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): MetagenomeAnalysisStudyQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.ASSEMBLY,
+    ): MetagenomeAssemblyQuery,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.CODING): MetagenomeCodingQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.NONCODING,
+    ): MetagenomeNoncodingQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): MetagenomeReadExperimentQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_RUN,
+    ): MetagenomeReadRunQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.READ_STUDY,
+    ): MetagenomeReadStudyQuery,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.SAMPLE): MetagenomeSampleQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.SEQUENCE,
+    ): MetagenomeSequenceQuery,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.STUDY): MetagenomeStudyQuery,
+    (ENAPortalDataPortal.METAGENOME, ENAPortalResultType.TAXON): MetagenomeTaxonQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.TLS_SET,
+    ): MetagenomeTlsSetQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.TSA_SET,
+    ): MetagenomeTsaSetQuery,
+    (
+        ENAPortalDataPortal.METAGENOME,
+        ENAPortalResultType.WGS_SET,
+    ): MetagenomeWgsSetQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.ANALYSIS): PathogenAnalysisQuery,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.ANALYSIS_STUDY,
+    ): PathogenAnalysisStudyQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.ASSEMBLY): PathogenAssemblyQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.CODING): PathogenCodingQuery,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.NONCODING,
+    ): PathogenNoncodingQuery,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.READ_EXPERIMENT,
+    ): PathogenReadExperimentQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.READ_RUN): PathogenReadRunQuery,
+    (
+        ENAPortalDataPortal.PATHOGEN,
+        ENAPortalResultType.READ_STUDY,
+    ): PathogenReadStudyQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.SAMPLE): PathogenSampleQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.SEQUENCE): PathogenSequenceQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.STUDY): PathogenStudyQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TAXON): PathogenTaxonQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TLS_SET): PathogenTlsSetQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.TSA_SET): PathogenTsaSetQuery,
+    (ENAPortalDataPortal.PATHOGEN, ENAPortalResultType.WGS_SET): PathogenWgsSetQuery,
+}
+
 __all__ = [
     "ENAPortalResultType",
     "RESULT_MODELS",
+    "FIELDS_MODELS",
+    "QUERY_MODELS",
     "ENAAnalysisFields",
     "ENAAnalysisQuery",
     "ENAAnalysisResult",

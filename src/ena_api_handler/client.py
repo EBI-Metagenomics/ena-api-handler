@@ -16,8 +16,14 @@ from ena_api_handler._processing import (
     apply_exclude,
     compute_raw_data_size,
 )
-from ena_api_handler.query import ENABaseQuery, ENAQueryClause, ENARawQuery
-from ena_api_handler.types import ENAPortalDataPortal
+from ena_api_handler.query import (
+    ENABaseQuery,
+    ENAQueryClause,
+    ENAQueryNot,
+    ENAQueryPair,
+    ENARawQuery,
+)
+from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 
 _DEFAULT = object()  # sentinel: "use DEFAULT_FIELD_COERCIONS"
 
@@ -30,6 +36,49 @@ class ENAClientError(Exception):
 
 class ENAAvailabilityError(ENAClientError):
     """Raised when all portals returned empty results and raise_on_empty=True."""
+
+
+class ENAQueryValidationError(ENAClientError):
+    """Raised when fields/query don't match result type for any queried portal."""
+
+
+def _query_leaves(clause: ENAQueryClause) -> list[ENAQueryClause]:
+    """Recursively walk a composed query tree and return its leaf clauses."""
+    if isinstance(clause, ENAQueryPair):
+        return _query_leaves(clause.left) + _query_leaves(clause.right)
+    if isinstance(clause, ENAQueryNot):
+        return _query_leaves(clause.clause)
+    return [clause]
+
+
+def _portal_types_match(
+    portal: ENAPortalDataPortal,
+    result: Enum,
+    query: ENABaseQuery | ENAQueryClause,
+    fields: list[Enum | str] | None,
+) -> bool:
+    """
+    Check that any typed query leaves / fields belong to the (portal, result)
+    pair's generated Query/Fields classes. Untyped inputs (ENARawQuery, plain
+    string field names) are always considered compatible.
+    """
+    from ena_api_handler.models import FIELDS_MODELS, QUERY_MODELS  # noqa: PLC0415
+
+    expected_query_cls = QUERY_MODELS.get((portal, result))
+    if expected_query_cls is not None:
+        for leaf in _query_leaves(query):
+            if isinstance(leaf, ENABaseQuery) and not isinstance(
+                leaf, expected_query_cls
+            ):
+                return False
+
+    expected_fields_cls = FIELDS_MODELS.get((portal, result))
+    if expected_fields_cls is not None and fields:
+        for field in fields:
+            if isinstance(field, Enum) and not isinstance(field, expected_fields_cls):
+                return False
+
+    return True
 
 
 class ENAClient:
@@ -175,6 +224,10 @@ class ENAClient:
         ------
         ENAClientError
             If the API returns a non-2xx response.
+        ENAQueryValidationError
+            If ``fields``/``query`` don't match ``result`` for any portal in
+            ``portals`` (typed inputs only; ``ENARawQuery``/plain strings are
+            never rejected).
         ENAAvailabilityError
             If ``raise_on_empty=True`` and no results were found.
         """
@@ -184,7 +237,11 @@ class ENAClient:
             DEFAULT_FIELD_COERCIONS if field_coercions is _DEFAULT else field_coercions
         )
 
+        attempted = False
         for portal in portals:
+            if not _portal_types_match(portal, result, query, fields):
+                continue
+            attempted = True
             result_model = RESULT_MODELS.get((portal, result))
             params = self._build_params(
                 result, query, fields, portal, limit, include_metagenomes
@@ -198,6 +255,11 @@ class ENAClient:
                 models = [result_model.model_validate(r) for r in rows]
                 return _coerce_models(models, coercions)
 
+        if not attempted:
+            raise ENAQueryValidationError(
+                f"fields/query do not match result type {result.value} for any portal"
+                f" in {[p.value for p in portals]}"
+            )
         if raise_on_empty:
             raise ENAAvailabilityError(
                 f"No results for {result.value} across portals: {[p.value for p in portals]}"
@@ -293,6 +355,10 @@ class ENAClient:
         ------
         ENAClientError
             If the API returns a non-2xx response.
+        ENAQueryValidationError
+            If ``fields``/``query`` don't match ``result`` for any portal in
+            ``portals`` (typed inputs only; ``ENARawQuery``/plain strings are
+            never rejected).
         ENAAvailabilityError
             If ``raise_on_empty=True`` and no results were found.
         """
@@ -302,7 +368,11 @@ class ENAClient:
             DEFAULT_FIELD_COERCIONS if field_coercions is _DEFAULT else field_coercions
         )
 
+        attempted = False
         for portal in portals:
+            if not _portal_types_match(portal, result, query, fields):
+                continue
+            attempted = True
             result_model = RESULT_MODELS.get((portal, result))
             params = self._build_params(
                 result, query, fields, portal, limit, include_metagenomes
@@ -318,6 +388,11 @@ class ENAClient:
                 models = [result_model.model_validate(r) for r in rows]
                 return _coerce_models(models, coercions)
 
+        if not attempted:
+            raise ENAQueryValidationError(
+                f"fields/query do not match result type {result.value} for any portal"
+                f" in {[p.value for p in portals]}"
+            )
         if raise_on_empty:
             raise ENAAvailabilityError(
                 f"No results for {result.value} across portals: {[p.value for p in portals]}"
@@ -413,6 +488,61 @@ class ENAClient:
             if rows:
                 return rows[0]
         return None
+
+    def check_study_availability(
+        self,
+        primary_accession: str | None = None,
+        secondary_accession: str | None = None,
+        *,
+        auth: httpx.Auth,
+    ) -> ENAAvailability:
+        """
+        Determine whether a study is public, privately accessible with
+        ``auth``, or unavailable under either.
+
+        Tries READ_STUDY, ANALYSIS_STUDY, then STUDY result types across
+        METAGENOME and ENA portals (same order as ``get_study()``), first
+        unauthenticated, then with ``auth`` if nothing was found publicly.
+        """
+        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
+
+        if not primary_accession and not secondary_accession:
+            raise ValueError(
+                "Either primary_accession or secondary_accession must be provided"
+            )
+
+        query_parts: list[ENAQueryClause] = []
+        if primary_accession:
+            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
+        if secondary_accession:
+            query_parts.append(
+                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
+            )
+
+        query: ENABaseQuery | ENAQueryClause = query_parts[0]
+        for part in query_parts[1:]:
+            query = query | part
+
+        for probe_auth in (None, auth):
+            for result_type in (
+                ENAPortalResultType.READ_STUDY,
+                ENAPortalResultType.ANALYSIS_STUDY,
+                ENAPortalResultType.STUDY,
+            ):
+                rows = self.search(
+                    result=result_type,
+                    query=query,
+                    portals=_CONVENIENCE_PORTALS,
+                    limit=1,
+                    auth=probe_auth,
+                )
+                if rows:
+                    return (
+                        ENAAvailability.PUBLIC
+                        if probe_auth is None
+                        else ENAAvailability.PRIVATE
+                    )
+        return ENAAvailability.SUPPRESSED
 
     def get_sample(
         self,
@@ -720,6 +850,62 @@ class ENAClient:
             if rows:
                 return rows[0]
         return None
+
+    async def check_study_availability_async(
+        self,
+        primary_accession: str | None = None,
+        secondary_accession: str | None = None,
+        *,
+        auth: httpx.Auth,
+    ) -> ENAAvailability:
+        """
+        Determine whether a study is public, privately accessible with
+        ``auth``, or unavailable under either.
+
+        Tries READ_STUDY, ANALYSIS_STUDY, then STUDY result types across
+        METAGENOME and ENA portals (same order as ``get_study_async()``),
+        first unauthenticated, then with ``auth`` if nothing was found
+        publicly.
+        """
+        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
+
+        if not primary_accession and not secondary_accession:
+            raise ValueError(
+                "Either primary_accession or secondary_accession must be provided"
+            )
+
+        query_parts: list[ENAQueryClause] = []
+        if primary_accession:
+            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
+        if secondary_accession:
+            query_parts.append(
+                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
+            )
+
+        query: ENABaseQuery | ENAQueryClause = query_parts[0]
+        for part in query_parts[1:]:
+            query = query | part
+
+        for probe_auth in (None, auth):
+            for result_type in (
+                ENAPortalResultType.READ_STUDY,
+                ENAPortalResultType.ANALYSIS_STUDY,
+                ENAPortalResultType.STUDY,
+            ):
+                rows = await self.search_async(
+                    result=result_type,
+                    query=query,
+                    portals=_CONVENIENCE_PORTALS,
+                    limit=1,
+                    auth=probe_auth,
+                )
+                if rows:
+                    return (
+                        ENAAvailability.PUBLIC
+                        if probe_auth is None
+                        else ENAAvailability.PRIVATE
+                    )
+        return ENAAvailability.SUPPRESSED
 
     async def get_sample_async(
         self,

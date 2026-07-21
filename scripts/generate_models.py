@@ -344,6 +344,7 @@ def generate_models_init(
         "",
         "from pydantic import BaseModel",
         "",
+        "from ena_api_handler.query import ENABaseQuery",
         "from ena_api_handler.types import ENAPortalDataPortal",
         "",
     ]
@@ -394,8 +395,45 @@ def generate_models_init(
             lines.append(f"    ({portal_const}, {result_const}): {result_cls},")
     lines += ["}", ""]
 
+    # FIELDS_MODELS registry
+    lines += [
+        "",
+        "FIELDS_MODELS: dict[tuple[ENAPortalDataPortal, ENAPortalResultType], type[Enum]] = {",
+    ]
+    for portal in sorted(portals):
+        results = portal_results.get(portal, [])
+        prefix = class_prefix(portal)
+        portal_const = f"ENAPortalDataPortal.{portal.upper()}"
+        for result in sorted(results):
+            segment = result_to_class_segment(result)
+            result_const = f"ENAPortalResultType.{result.upper()}"
+            fields_cls = f"{prefix}{segment}Fields"
+            lines.append(f"    ({portal_const}, {result_const}): {fields_cls},")
+    lines += ["}", ""]
+
+    # QUERY_MODELS registry
+    lines += [
+        "",
+        "QUERY_MODELS: dict[tuple[ENAPortalDataPortal, ENAPortalResultType], type[ENABaseQuery]] = {",
+    ]
+    for portal in sorted(portals):
+        results = portal_results.get(portal, [])
+        prefix = class_prefix(portal)
+        portal_const = f"ENAPortalDataPortal.{portal.upper()}"
+        for result in sorted(results):
+            segment = result_to_class_segment(result)
+            result_const = f"ENAPortalResultType.{result.upper()}"
+            query_cls = f"{prefix}{segment}Query"
+            lines.append(f"    ({portal_const}, {result_const}): {query_cls},")
+    lines += ["}", ""]
+
     # __all__
-    all_names = ["ENAPortalResultType", "RESULT_MODELS"]
+    all_names = [
+        "ENAPortalResultType",
+        "RESULT_MODELS",
+        "FIELDS_MODELS",
+        "QUERY_MODELS",
+    ]
     for portal in sorted(portals):
         results = portal_results.get(portal, [])
         prefix = class_prefix(portal)
@@ -613,6 +651,16 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
             ],
             f"list[{union(['analysis'])}]",
         ),
+        (
+            "check_study_availability",
+            [
+                "        primary_accession: str | None = ...,",
+                "        secondary_accession: str | None = ...,",
+                "        *,",
+                "        auth: httpx.Auth,",
+            ],
+            "ENAAvailability",
+        ),
     ]
 
     lines: list[str] = [
@@ -631,13 +679,16 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         *[f"    {name}," for name in sorted(imported)],
         ")",
         "from ena_api_handler.query import ENABaseQuery, ENAQueryClause",
-        "from ena_api_handler.types import ENAPortalDataPortal",
+        "from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal",
         "",
         "",
         "class ENAClientError(Exception): ...",
         "",
         "",
         "class ENAAvailabilityError(ENAClientError): ...",
+        "",
+        "",
+        "class ENAQueryValidationError(ENAClientError): ...",
         "",
         "",
         "class ENAClient:",

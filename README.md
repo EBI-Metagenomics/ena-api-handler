@@ -228,6 +228,29 @@ Available portals:
 - `ENAPortalDataPortal.METAGENOME`
 - `ENAPortalDataPortal.PATHOGEN`
 
+### Fields/query validation
+
+Query and fields models are generated per portal (e.g. `ENAReadRunQuery` vs.
+`MetagenomeReadRunQuery`), so `search()` checks that any typed `query`/`fields`
+you pass actually belong to the `(portal, result)` pair being queried. A
+portal whose generated Query/Fields class doesn't match is silently skipped
+in the fallback loop rather than sent a broken request; `search()` only
+raises `ENAQueryValidationError` if **no** portal in `portals=` matches.
+Untyped inputs — `ENARawQuery` and plain field-name strings — are always
+considered compatible and are never rejected.
+
+```python
+from ena_api_handler import ENAQueryValidationError
+
+try:
+    client.search(
+        result=ENAPortalResultType.STUDY,
+        query=ENAReadRunQuery(study_accession="PRJEB1787"),  # wrong query for STUDY
+    )
+except ENAQueryValidationError:
+    print("fields/query don't match this result type")
+```
+
 ## Composing Queries
 
 The library supports query composition with `&`, `|`, and `~`.
@@ -287,6 +310,31 @@ with ENAClient() as client:
 ```python
 with ENAClient() as client:
     study = client.get_study(secondary_accession="ERP001736")
+```
+
+### `check_study_availability()`
+
+Determines whether a study is public, privately accessible with credentials,
+or unavailable under either. `auth` is required: the method always probes
+unauthenticated first, then retries with `auth` only if nothing public was
+found, and returns `ENAAvailability.SUPPRESSED` if both probes come up empty.
+
+```python
+import httpx
+from ena_api_handler import ENAAvailability
+
+with ENAClient() as client:
+    availability = client.check_study_availability(
+        primary_accession="PRJEB1787",
+        auth=httpx.BasicAuth("user", "pass"),
+    )
+
+if availability == ENAAvailability.PUBLIC:
+    ...
+elif availability == ENAAvailability.PRIVATE:
+    ...
+else:  # ENAAvailability.SUPPRESSED
+    ...
 ```
 
 ### `get_sample()`
@@ -421,6 +469,7 @@ async with ENAClient() as client:
 Available async helpers mirror the sync versions:
 
 - `get_study_async()`
+- `check_study_availability_async()`
 - `get_sample_async()`
 - `get_sample_studies_async()`
 - `get_run_async()`
@@ -519,6 +568,7 @@ rows = client.search(
 The client raises:
 
 - `ENAClientError` for API errors and unsuccessful responses
+- `ENAQueryValidationError` when typed `fields`/`query` don't match `result` for any queried portal (see [Fields/query validation](#fieldsquery-validation))
 - `ENAAvailabilityError` when `raise_on_empty=True` and no portal returns data
 
 Example:
