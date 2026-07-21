@@ -13,6 +13,7 @@ import pytest
 from pydantic import BaseModel
 
 from ena_api_handler import ENAClient, ENAClientError
+from ena_api_handler._processing import compute_raw_data_size
 from ena_api_handler.client import ENAAvailabilityError
 from ena_api_handler.query import ENABaseQuery
 from ena_api_handler.types import ENAPortalDataPortal
@@ -221,7 +222,7 @@ def test_get_study_runs_adds_library_strategy_when_filtering() -> None:
 
     result = client.get_study_runs("PRJEB1234", fields=["run_accession"])
 
-    assert result == [{"run_accession": "ERR1234"}]
+    assert result == [{"run_accession": "ERR1234", "raw_data_size": None}]
 
 
 # ── Async tests ───────────────────────────────────────────────────────────────
@@ -334,7 +335,34 @@ async def test_get_study_runs_async_adds_library_strategy_when_filtering() -> No
 
     result = await client.get_study_runs_async("PRJEB1234", fields=["run_accession"])
 
-    assert result == [{"run_accession": "ERR1234"}]
+    assert result == [{"run_accession": "ERR1234", "raw_data_size": None}]
+
+
+async def test_get_run_async_attaches_raw_data_size() -> None:
+    client = ENAClient()
+    client._async_client = _make_async_mock(
+        200, [{"run_accession": "ERR1234", "fastq_bytes": "100;200"}]
+    )
+
+    run = await client.get_run_async("ERR1234")
+
+    assert run is not None
+    assert run.raw_data_size == 300  # type: ignore[union-attr]
+
+
+async def test_get_study_runs_async_attaches_raw_data_size_to_every_row() -> None:
+    client = ENAClient()
+    client._async_client = _make_async_mock(
+        200,
+        [
+            {"run_accession": "ERR1", "fastq_bytes": "100"},
+            {"run_accession": "ERR2", "submitted_bytes": "50;50"},
+        ],
+    )
+
+    runs = await client.get_study_runs_async("PRJEB1234", filter_assembly_runs=False)
+
+    assert [r.raw_data_size for r in runs] == [100, 100]  # type: ignore[union-attr]
 
 
 async def test_search_async_no_context_manager() -> None:
@@ -505,6 +533,64 @@ def test_exclude_filters_rows() -> None:
     )
     assert len(results) == 1
     assert results[0].library_strategy == "WGS"  # type: ignore[attr-defined]
+
+
+def test_compute_raw_data_size_sums_fastq_bytes() -> None:
+    assert compute_raw_data_size({"fastq_bytes": "100;200"}) == 300
+
+
+def test_compute_raw_data_size_falls_back_to_submitted_bytes() -> None:
+    assert compute_raw_data_size({"submitted_bytes": "10;20;30"}) == 60
+
+
+def test_compute_raw_data_size_prefers_fastq_bytes_over_submitted_bytes() -> None:
+    row = {"fastq_bytes": "100", "submitted_bytes": "999"}
+    assert compute_raw_data_size(row) == 100
+
+
+def test_compute_raw_data_size_none_when_neither_present() -> None:
+    assert compute_raw_data_size({}) is None
+
+
+def test_compute_raw_data_size_none_when_fastq_bytes_empty() -> None:
+    assert compute_raw_data_size({"fastq_bytes": "", "submitted_bytes": "50"}) == 50
+
+
+def test_get_run_attaches_raw_data_size() -> None:
+    client = ENAClient()
+    client._client = _make_sync_mock(
+        200, [{"run_accession": "ERR1234", "fastq_bytes": "100;200"}]
+    )
+
+    run = client.get_run("ERR1234")
+
+    assert run is not None
+    assert run.raw_data_size == 300  # type: ignore[union-attr]
+
+
+def test_get_run_raw_data_size_none_when_bytes_fields_absent() -> None:
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{"run_accession": "ERR1234"}])
+
+    run = client.get_run("ERR1234")
+
+    assert run is not None
+    assert run.raw_data_size is None  # type: ignore[union-attr]
+
+
+def test_get_study_runs_attaches_raw_data_size_to_every_row() -> None:
+    client = ENAClient()
+    client._client = _make_sync_mock(
+        200,
+        [
+            {"run_accession": "ERR1", "fastq_bytes": "100"},
+            {"run_accession": "ERR2", "submitted_bytes": "50;50"},
+        ],
+    )
+
+    runs = client.get_study_runs("PRJEB1234", filter_assembly_runs=False)
+
+    assert [r.raw_data_size for r in runs] == [100, 100]  # type: ignore[union-attr]
 
 
 # ── download_runs stub ─────────────────────────────────────────────────────────

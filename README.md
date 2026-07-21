@@ -299,7 +299,9 @@ sample = client.get_sample("SAMN11835464")
 
 ### `get_run()`
 
-Fetches a single run by accession.
+Fetches a single run by accession. The returned model carries a computed
+`raw_data_size` field — the sum of `fastq_bytes`, falling back to
+`submitted_bytes` if `fastq_bytes` isn't present.
 
 ```python
 run = client.get_run("ERR1701760")
@@ -307,7 +309,8 @@ run = client.get_run("ERR1701760")
 
 ### `get_study_runs()`
 
-Fetches all runs for a study.
+Fetches all runs for a study. Each returned run also carries the computed
+`raw_data_size` field described above.
 
 By default it filters out `AMPLICON` runs.
 

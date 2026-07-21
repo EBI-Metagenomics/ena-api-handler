@@ -14,6 +14,7 @@ from ena_api_handler._processing import (
     apply_aliases,
     apply_coercions,
     apply_exclude,
+    compute_raw_data_size,
 )
 from ena_api_handler.query import ENABaseQuery, ENAQueryClause, ENARawQuery
 from ena_api_handler.types import ENAPortalDataPortal
@@ -449,6 +450,7 @@ class ENAClient:
             portals=_CONVENIENCE_PORTALS,
             limit=1,
         )
+        rows = _attach_raw_data_size(rows)
         return rows[0] if rows else None
 
     def get_study_runs(
@@ -492,6 +494,7 @@ class ENAClient:
             exclude=exclude,
             limit=0,
         )
+        rows = _attach_raw_data_size(rows)
         if filter_accessions:
             rows = [
                 r
@@ -730,6 +733,7 @@ class ENAClient:
             portals=_CONVENIENCE_PORTALS,
             limit=1,
         )
+        rows = _attach_raw_data_size(rows)
         return rows[0] if rows else None
 
     async def get_study_runs_async(
@@ -773,6 +777,7 @@ class ENAClient:
             exclude=exclude,
             limit=0,
         )
+        rows = _attach_raw_data_size(rows)
         if filter_accessions:
             rows = [
                 r
@@ -977,6 +982,18 @@ def _coerce_models(
                 except (ValueError, TypeError):
                     pass
         result.append(model.model_copy(update=updates) if updates else model)
+    return result
+
+
+def _attach_raw_data_size(rows: list[Any]) -> list[Any]:
+    """Attach a computed raw_data_size field (sum of fastq_bytes/submitted_bytes)."""
+    result: list[Any] = []
+    for row in rows:
+        size = compute_raw_data_size(row)
+        if isinstance(row, BaseModel):
+            result.append(row.model_copy(update={"raw_data_size": size}))
+        else:
+            result.append({**row, "raw_data_size": size})
     return result
 
 

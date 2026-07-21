@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from pydantic import BaseModel
+
 # ── Default field coercions ────────────────────────────────────────────────────
 # Fields that ENA returns as strings but are semantically numeric.
 # Applied to raw response dicts before Pydantic model validation.
@@ -50,3 +52,16 @@ def apply_exclude(
     if not exclude:
         return rows
     return [row for row in rows if not any(row.get(k) == v for k, v in exclude.items())]
+
+
+def compute_raw_data_size(row: BaseModel | dict[str, Any]) -> int | None:
+    """Sum semicolon-separated byte counts from fastq_bytes, falling back to submitted_bytes."""
+
+    def _get(field: str) -> Any:
+        return row.get(field) if isinstance(row, dict) else getattr(row, field, None)
+
+    for field in ("fastq_bytes", "submitted_bytes"):
+        value = _get(field)
+        if value:
+            return sum(int(s) for s in value.split(";") if s)
+    return None
