@@ -297,6 +297,16 @@ Looks up a sample by primary or secondary sample accession.
 sample = client.get_sample("SAMN11835464")
 ```
 
+### `get_sample_studies()`
+
+Looks up the set of `secondary_study_accession` values linked to a sample
+(matching on either its primary or secondary sample accession). Defaults to
+searching `read_run`; pass `result=` to search a different result type.
+
+```python
+studies = client.get_sample_studies("SAMN11835464")
+```
+
 ### `get_run()`
 
 Fetches a single run by accession. The returned model carries a computed
@@ -412,6 +422,7 @@ Available async helpers mirror the sync versions:
 
 - `get_study_async()`
 - `get_sample_async()`
+- `get_sample_studies_async()`
 - `get_run_async()`
 - `get_study_runs_async()`
 - `get_study_assemblies_async()`

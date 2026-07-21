@@ -225,6 +225,48 @@ def test_get_study_runs_adds_library_strategy_when_filtering() -> None:
     assert result == [{"run_accession": "ERR1234", "raw_data_size": None}]
 
 
+def test_get_sample_studies_queries_both_accession_fields_and_defaults_to_read_run() -> (
+    None
+):
+    client = ENAClient()
+    mock_http = _make_sync_mock(
+        200,
+        [
+            {"secondary_study_accession": "ERP1234"},
+            {"secondary_study_accession": "ERP5678"},
+            {},  # rows missing the field are dropped
+        ],
+    )
+    client._client = mock_http
+
+    result = client.get_sample_studies("SAMN11835464")
+
+    assert result == {"ERP1234", "ERP5678"}
+    _, kwargs = mock_http.get.call_args
+    params: dict = kwargs["params"]
+    assert params["result"] == "read_run"
+    assert params["fields"] == "secondary_study_accession"
+    assert 'sample_accession="SAMN11835464"' in params["query"]
+    assert 'secondary_sample_accession="SAMN11835464"' in params["query"]
+
+
+def test_get_sample_studies_accepts_explicit_result_type() -> None:
+    client = ENAClient()
+    calls: list[dict[str, Any]] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs)
+        return []
+
+    client.search = fake_search  # type: ignore[assignment]
+
+    from ena_api_handler.models import ENAPortalResultType
+
+    client.get_sample_studies("SAMN11835464", result=ENAPortalResultType.ANALYSIS)
+
+    assert calls[0]["result"] is ENAPortalResultType.ANALYSIS
+
+
 # ── Async tests ───────────────────────────────────────────────────────────────
 
 
@@ -336,6 +378,22 @@ async def test_get_study_runs_async_adds_library_strategy_when_filtering() -> No
     result = await client.get_study_runs_async("PRJEB1234", fields=["run_accession"])
 
     assert result == [{"run_accession": "ERR1234", "raw_data_size": None}]
+
+
+async def test_get_sample_studies_async_queries_both_accession_fields() -> None:
+    client = ENAClient()
+    mock_http = _make_async_mock(200, [{"secondary_study_accession": "ERP1234"}])
+    client._async_client = mock_http
+
+    result = await client.get_sample_studies_async("SAMN11835464")
+
+    assert result == {"ERP1234"}
+    _, kwargs = mock_http.get.call_args
+    params: dict = kwargs["params"]
+    assert params["result"] == "read_run"
+    assert params["fields"] == "secondary_study_accession"
+    assert 'sample_accession="SAMN11835464"' in params["query"]
+    assert 'secondary_sample_accession="SAMN11835464"' in params["query"]
 
 
 async def test_get_run_async_attaches_raw_data_size() -> None:

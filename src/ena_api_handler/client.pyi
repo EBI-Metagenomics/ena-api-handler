@@ -2008,6 +2008,11 @@ class ENAClient:
         sample_accession: str,
         fields: list[Enum | str] | None = ...,
     ) -> MetagenomeSampleResult | ENASampleResult | None: ...
+    def get_sample_studies(
+        self,
+        sample_accession: str,
+        result: Enum | None = ...,
+    ) -> set[str]: ...
     def get_run(
         self,
         run_accession: str,
@@ -2076,6 +2081,11 @@ class ENAClient:
         sample_accession: str,
         fields: list[Enum | str] | None = ...,
     ) -> MetagenomeSampleResult | ENASampleResult | None: ...
+    async def get_sample_studies_async(
+        self,
+        sample_accession: str,
+        result: Enum | None = ...,
+    ) -> set[str]: ...
     async def get_run_async(
         self,
         run_accession: str,

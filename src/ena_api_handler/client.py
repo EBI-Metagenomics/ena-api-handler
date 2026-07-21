@@ -435,6 +435,30 @@ class ENAClient:
         )
         return rows[0] if rows else None
 
+    def get_sample_studies(
+        self,
+        sample_accession: str,
+        result: Enum | None = None,
+    ) -> set[str]:
+        """Fetch the set of secondary_study_accession values linked to a sample."""
+        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
+
+        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
+            f'secondary_sample_accession="{sample_accession}"'
+        )
+        rows = self.search(
+            result=result or ENAPortalResultType.READ_RUN,
+            query=query,
+            fields=["secondary_study_accession"],
+            portals=_CONVENIENCE_PORTALS,
+            limit=0,
+        )
+        return {
+            r.secondary_study_accession
+            for r in rows
+            if getattr(r, "secondary_study_accession", None)
+        }
+
     def get_run(
         self,
         run_accession: str,
@@ -717,6 +741,30 @@ class ENAClient:
             limit=1,
         )
         return rows[0] if rows else None
+
+    async def get_sample_studies_async(
+        self,
+        sample_accession: str,
+        result: Enum | None = None,
+    ) -> set[str]:
+        """Fetch the set of secondary_study_accession values linked to a sample."""
+        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
+
+        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
+            f'secondary_sample_accession="{sample_accession}"'
+        )
+        rows = await self.search_async(
+            result=result or ENAPortalResultType.READ_RUN,
+            query=query,
+            fields=["secondary_study_accession"],
+            portals=_CONVENIENCE_PORTALS,
+            limit=0,
+        )
+        return {
+            r.secondary_study_accession
+            for r in rows
+            if getattr(r, "secondary_study_accession", None)
+        }
 
     async def get_run_async(
         self,

@@ -530,6 +530,14 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
             f"{union(['sample'])} | None",
         ),
         (
+            "get_sample_studies",
+            [
+                "        sample_accession: str,",
+                "        result: Enum | None = ...,",
+            ],
+            "set[str]",
+        ),
+        (
             "get_run",
             [
                 "        run_accession: str,",
