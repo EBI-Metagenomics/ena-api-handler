@@ -229,3 +229,76 @@ def test_generate_models_init_result_models_registry() -> None:
         "(ENAPortalDataPortal.ENA, ENAPortalResultType.READ_RUN): ENAReadRunResult,"
         in source
     )
+
+
+# ── generate_client_stub ──────────────────────────────────────────────────────
+
+_STUB_PORTAL_RESULTS = {
+    "ena": ["read_run", "read_study", "study", "analysis", "analysis_study", "sample"],
+    "metagenome": [
+        "read_run",
+        "read_study",
+        "study",
+        "analysis",
+        "analysis_study",
+        "sample",
+    ],
+}
+
+
+def test_generate_client_stub_parses_as_python() -> None:
+    import ast
+
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    ast.parse(source)
+
+
+def test_generate_client_stub_search_overload_per_query_type() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert "@overload" in source
+    assert (
+        "        query: ENAReadRunQuery,\n" in source
+        and "    ) -> list[ENAReadRunResult]: ..." in source
+    )
+    assert (
+        "        query: MetagenomeReadRunQuery,\n" in source
+        and "    ) -> list[MetagenomeReadRunResult]: ..." in source
+    )
+
+
+def test_generate_client_stub_search_fallback_overload() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert "query: ENABaseQuery | ENAQueryClause,\n" in source
+    assert source.count("-> list[BaseModel]: ...") == 2  # search + search_async
+
+
+def test_generate_client_stub_search_async_present() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert "async def search_async(" in source
+
+
+def test_generate_client_stub_get_run_returns_portal_union() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert (
+        "    def get_run(\n"
+        "        self,\n"
+        "        run_accession: str,\n"
+        "        fields: list[Enum | str] | None = ...,\n"
+        "    ) -> MetagenomeReadRunResult | ENAReadRunResult | None: ...\n" in source
+    )
+
+
+def test_generate_client_stub_get_study_returns_six_way_union() -> None:
+    source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
+    assert (
+        "MetagenomeReadStudyResult | ENAReadStudyResult | "
+        "MetagenomeAnalysisStudyResult | ENAAnalysisStudyResult | "
+        "MetagenomeStudyResult | ENAStudyResult | None" in source
+    )
+
+
+def test_generate_client_stub_omits_portal_without_result() -> None:
+    """A result type only present for one portal shouldn't reference the other's class."""
+    source = gm.generate_client_stub({"ena": ["sample"]})
+    assert "MetagenomeSampleResult" not in source
+    assert "ENASampleResult | None" in source

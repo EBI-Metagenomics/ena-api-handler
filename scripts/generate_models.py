@@ -37,6 +37,11 @@ MAX_CONCURRENT = 10
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SNAPSHOTS_DIR = REPO_ROOT / "snapshots"
 MODELS_DIR = REPO_ROOT / "src" / "ena_api_handler" / "models"
+CLIENT_STUB_PATH = REPO_ROOT / "src" / "ena_api_handler" / "client.pyi"
+
+# Portals tried, in order, by ENAClient's convenience methods (get_run, get_study, ...).
+# Must match _CONVENIENCE_PORTALS in src/ena_api_handler/client.py.
+CONVENIENCE_PORTALS = ["metagenome", "ena"]
 
 # Portal → Python class name prefix
 PORTAL_PREFIX: dict[str, str] = {
@@ -408,6 +413,256 @@ def generate_models_init(
     return "\n".join(lines)
 
 
+def _result_class_name(portal: str, result: str, kind: str) -> str:
+    return f"{class_prefix(portal)}{result_to_class_segment(result)}{kind}"
+
+
+def _convenience_result_classes(
+    result_types: list[str],
+    portal_results: dict[str, list[str]],
+) -> list[str]:
+    """
+    Result class names reachable by a convenience method that queries
+    `result_types` in order across CONVENIENCE_PORTALS (in order), matching
+    the (result_type, portal) iteration order ENAClient.search() actually uses.
+    """
+    names: list[str] = []
+    for result in result_types:
+        for portal in CONVENIENCE_PORTALS:
+            if result not in portal_results.get(portal, []):
+                continue
+            name = _result_class_name(portal, result, "Result")
+            if name not in names:
+                names.append(name)
+    return names
+
+
+def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
+    """
+    Generate a .pyi stub for ena_api_handler.client giving ENAClient.search()/
+    search_async() precise overloads keyed on the *Query class passed in, and
+    giving each convenience method (get_run, get_study, ...) its true return
+    type instead of the generic BaseModel the runtime signatures declare.
+    """
+    query_result_pairs = [
+        (portal, result)
+        for portal in sorted(portal_results)
+        for result in sorted(portal_results[portal])
+    ]
+
+    def union(result_types: list[str]) -> str:
+        names = _convenience_result_classes(result_types, portal_results)
+        return " | ".join(names) if names else "BaseModel"
+
+    imported: set[str] = set()
+    for portal, result in query_result_pairs:
+        imported.add(_result_class_name(portal, result, "Query"))
+        imported.add(_result_class_name(portal, result, "Result"))
+
+    search_param_tail = [
+        "        fields: list[Enum | str] | None = ...,",
+        "        portals: list[ENAPortalDataPortal] | tuple[ENAPortalDataPortal, ...] = ...,",
+        "        limit: int | None = ...,",
+        "        include_metagenomes: bool = ...,",
+        "        raise_on_empty: bool = ...,",
+        "        field_coercions: dict | None = ...,",
+        "        field_aliases: dict[str, str] | None = ...,",
+        "        exclude: dict[str, Any] | None = ...,",
+        "        auth: httpx.Auth | None = ...,",
+    ]
+
+    def emit_search_overloads(method: str, is_async: bool) -> list[str]:
+        keyword = "async def" if is_async else "def"
+        out: list[str] = []
+        for portal, result in query_result_pairs:
+            query_cls = _result_class_name(portal, result, "Query")
+            result_cls = _result_class_name(portal, result, "Result")
+            out += [
+                "    @overload",
+                f"    {keyword} {method}(",
+                "        self,",
+                "        result: Enum,",
+                f"        query: {query_cls},",
+                *search_param_tail,
+                f"    ) -> list[{result_cls}]: ...",
+            ]
+        out += [
+            "    @overload",
+            f"    {keyword} {method}(",
+            "        self,",
+            "        result: Enum,",
+            "        query: ENABaseQuery | ENAQueryClause,",
+            *search_param_tail,
+            "    ) -> list[BaseModel]: ...",
+        ]
+        return out
+
+    def emit_method(
+        name: str,
+        is_async: bool,
+        params: list[str],
+        return_type: str,
+    ) -> list[str]:
+        keyword = "async def" if is_async else "def"
+        return [
+            f"    {keyword} {name}(",
+            "        self,",
+            *params,
+            f"    ) -> {return_type}: ...",
+        ]
+
+    convenience_specs: list[tuple[str, list[str], str]] = [
+        (
+            "get_study",
+            [
+                "        primary_accession: str | None = ...,",
+                "        secondary_accession: str | None = ...,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"{union(['read_study', 'analysis_study', 'study'])} | None",
+        ),
+        (
+            "get_sample",
+            [
+                "        sample_accession: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"{union(['sample'])} | None",
+        ),
+        (
+            "get_run",
+            [
+                "        run_accession: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"{union(['read_run'])} | None",
+        ),
+        (
+            "get_study_runs",
+            [
+                "        study_accession: str,",
+                "        fields: list[Enum | str] | None = ...,",
+                "        filter_assembly_runs: bool = ...,",
+                "        filter_accessions: list[str] | None = ...,",
+            ],
+            f"list[{union(['read_run'])}]",
+        ),
+        (
+            "get_study_assemblies",
+            [
+                "        study_accession: str,",
+                "        fields: list[Enum | str] | None = ...,",
+                "        filter_accessions: list[str] | None = ...,",
+                "        allow_non_primary_assembly: bool = ...,",
+            ],
+            f"list[{union(['analysis'])}]",
+        ),
+        (
+            "get_assembly",
+            [
+                "        assembly_accession: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"{union(['analysis'])} | None",
+        ),
+        (
+            "get_assembly_from_sample",
+            [
+                "        sample_name: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"{union(['analysis'])} | None",
+        ),
+        (
+            "get_updated_studies",
+            [
+                "        cutoff_date: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"list[{union(['study'])}]",
+        ),
+        (
+            "get_updated_runs",
+            [
+                "        cutoff_date: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"list[{union(['read_run'])}]",
+        ),
+        (
+            "get_updated_assemblies",
+            [
+                "        cutoff_date: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"list[{union(['analysis'])}]",
+        ),
+        (
+            "get_updated_tpa_assemblies",
+            [
+                "        cutoff_date: str,",
+                "        fields: list[Enum | str] | None = ...,",
+            ],
+            f"list[{union(['analysis'])}]",
+        ),
+    ]
+
+    lines: list[str] = [
+        "# AUTO-GENERATED by scripts/generate_models.py — do not edit manually.",
+        "# Precise return-type stub for ena_api_handler.client, kept separate so the",
+        "# runtime module stays free of the generated @overload block.",
+        "from __future__ import annotations",
+        "",
+        "from enum import Enum",
+        "from typing import Any, overload",
+        "",
+        "import httpx",
+        "from pydantic import BaseModel",
+        "",
+        "from ena_api_handler.models import (",
+        *[f"    {name}," for name in sorted(imported)],
+        ")",
+        "from ena_api_handler.query import ENABaseQuery, ENAQueryClause",
+        "from ena_api_handler.types import ENAPortalDataPortal",
+        "",
+        "",
+        "class ENAClientError(Exception): ...",
+        "",
+        "",
+        "class ENAAvailabilityError(ENAClientError): ...",
+        "",
+        "",
+        "class ENAClient:",
+        "    def __init__(",
+        "        self,",
+        "        url: str = ...,",
+        "        username: str | None = ...,",
+        "        password: str | None = ...,",
+        "        timeout: float = ...,",
+        "        retries: int = ...,",
+        "    ) -> None: ...",
+        "    def close(self) -> None: ...",
+        "    def __enter__(self) -> ENAClient: ...",
+        "    def __exit__(self, *_: Any) -> None: ...",
+        "    async def aclose(self) -> None: ...",
+        "    async def __aenter__(self) -> ENAClient: ...",
+        "    async def __aexit__(self, *_: Any) -> None: ...",
+        "    def download_runs(self, runs: Any) -> None: ...",
+        "",
+    ]
+    lines += emit_search_overloads("search", is_async=False)
+    lines.append("")
+    lines += emit_search_overloads("search_async", is_async=True)
+    lines.append("")
+    for name, params, return_type in convenience_specs:
+        lines += emit_method(name, False, params, return_type)
+    lines.append("")
+    for name, params, return_type in convenience_specs:
+        lines += emit_method(f"{name}_async", True, params, return_type)
+    lines.append("")
+    return "\n".join(lines)
+
+
 def run_generate(
     portals: list[str],
     all_result_types: list[str],
@@ -459,6 +714,15 @@ def run_generate(
     else:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         models_init_path.write_text(models_init_content, encoding="utf-8")
+
+    # client.pyi — precise search()/convenience-method overloads
+    client_stub_content = generate_client_stub(portal_results)
+    if dry_run:
+        log.info("  [dry-run] would write %s", CLIENT_STUB_PATH.relative_to(REPO_ROOT))
+    else:
+        CLIENT_STUB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        CLIENT_STUB_PATH.write_text(client_stub_content, encoding="utf-8")
+        log.info("  wrote %s", CLIENT_STUB_PATH.relative_to(REPO_ROOT))
 
     total = sum(len(v) for v in portal_results.values())
     log.info(
