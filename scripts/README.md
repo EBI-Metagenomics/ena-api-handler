@@ -91,6 +91,10 @@ It then (re)writes two index files, always, even if no individual model file cha
   - `ENAPortalResultType(str, Enum)` — union of every result type across all portals.
   - `RESULT_MODELS: dict[(ENAPortalDataPortal, ENAPortalResultType), type[BaseModel]]` —
     lookup from `(portal, result_type)` to that pair's generated `Result` class.
+- `src/ena_api_handler/client.pyi` — a stub, kept separate from `client.py`, giving
+  `ENAClient.search()`/`search_async()` and the convenience methods (`get_study`,
+  `get_sample`, ...) precise per-`(portal, result)` overloads instead of the generic
+  return types `client.py` declares at runtime.
 
 `--dry-run` logs what would be written (per model file and per index file) without touching
 disk. Every generated file starts with an `# AUTO-GENERATED ... — do not edit manually.`
@@ -111,6 +115,8 @@ src/ena_api_handler/models/
     __init__.py                   # generated: re-exports every result type's classes
     <result_type>.py               # generated: Fields / Query / Result classes
   __init__.py                     # generated: ENAPortalResultType + RESULT_MODELS
+
+src/ena_api_handler/client.pyi    # generated: precise ENAClient overloads
 ```
 
 Snapshots are committed to the repo. They're both the cache that makes `--skip-fetch` /
