@@ -9,7 +9,6 @@ A Python client for the ENA (European Nucleotide Archive) Portal API, used by th
 - **Generated code** (`src/ena_api_handler/models/`) — typed Pydantic models for every `(data portal, result type)` pair ENA exposes, produced by a codegen script from live API metadata.
 - **Handwritten code** (`src/ena_api_handler/client.py`, `query.py`, `_processing.py`, `types.py`) — the `ENAClient` (sync + async) and a composable query DSL built on top of the generated models.
 
-The project was recently rewritten (see `git log`): old package/build tooling was dropped for `pyproject.toml` + `uv`, and the client/model layer was rebuilt from scratch. **`ena_portal_api/` at the repo root is the old, pre-rewrite package** — it's still tracked in git but is dead code, not imported by anything under `src/` or `tests/`. Don't treat it as the current implementation; the live package is `src/ena_api_handler/`.
 
 ## Commands
 
