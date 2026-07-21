@@ -579,4 +579,4 @@ from ena_api_handler.models.ena import ENAReadRunFields, ENAReadRunQuery
 ## Notes
 
 - This README focuses on using the library.
-- Model-generation details are intentionally excluded and should live in separate documentation.
+- Model-generation details are intentionally excluded here — see [`scripts/README.md`](scripts/README.md) for how the typed models in `ena_api_handler.models` are generated and kept up to date with the ENA Portal API.
