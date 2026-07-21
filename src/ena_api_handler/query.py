@@ -75,7 +75,7 @@ class ENARawQuery(ENAQueryClause):
         return self._raw
 
 
-class ENABaseQuery(BaseModel):
+class ENABaseQuery(BaseModel, ENAQueryClause):
     """
     Base class for generated per-portal Query models.
 
@@ -96,12 +96,3 @@ class ENABaseQuery(BaseModel):
             for field, value in self.model_dump(exclude_none=True).items()
         ]
         return " AND ".join(parts)
-
-    def __and__(self, other: ENAQueryClause) -> ENAQueryPair:
-        return ENAQueryPair(self, other, ENAQueryOperator.AND)
-
-    def __or__(self, other: ENAQueryClause) -> ENAQueryPair:
-        return ENAQueryPair(self, other, ENAQueryOperator.OR)
-
-    def __invert__(self) -> ENAQueryNot:
-        return ENAQueryNot(self)

@@ -138,6 +138,12 @@ class ENAClientError(Exception): ...
 class ENAAvailabilityError(ENAClientError): ...
 
 class ENAClient:
+    _url: str
+    _auth: httpx.BasicAuth | None
+    _timeout: float
+    _retries: int
+    _client: httpx.Client | None
+    _async_client: httpx.AsyncClient | None
     def __init__(
         self,
         url: str = ...,

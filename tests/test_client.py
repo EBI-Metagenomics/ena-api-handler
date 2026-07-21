@@ -178,7 +178,7 @@ def test_get_study_supports_secondary_accession_only() -> None:
         calls.append(kwargs)
         return [{"study_accession": "PRJEB1234"}]
 
-    client.search = fake_search  # type: ignore[method-assign]
+    client.search = fake_search  # type: ignore[assignment]
 
     result = client.get_study(secondary_accession="ERP1234")
 
@@ -197,7 +197,7 @@ def test_get_study_prefers_study_level_results_over_runs() -> None:
             return [{"study_accession": "PRJEB1234"}]
         return [{"run_accession": "ERR1234"}]
 
-    client.search = fake_search  # type: ignore[method-assign]
+    client.search = fake_search  # type: ignore[assignment]
 
     result = client.get_study(primary_accession="PRJEB1234")
 
@@ -217,7 +217,7 @@ def test_get_study_runs_adds_library_strategy_when_filtering() -> None:
         assert "library_strategy" in field_values
         return [{"run_accession": "ERR1234"}]
 
-    client.search = fake_search  # type: ignore[method-assign]
+    client.search = fake_search  # type: ignore[assignment]
 
     result = client.get_study_runs("PRJEB1234", fields=["run_accession"])
 
@@ -309,7 +309,7 @@ async def test_get_study_async_supports_secondary_accession_only() -> None:
         calls.append(kwargs)
         return [{"study_accession": "PRJEB1234"}]
 
-    client.search_async = fake_search_async  # type: ignore[method-assign]
+    client.search_async = fake_search_async  # type: ignore[assignment]
 
     result = await client.get_study_async(secondary_accession="ERP1234")
 
@@ -330,7 +330,7 @@ async def test_get_study_runs_async_adds_library_strategy_when_filtering() -> No
         assert "library_strategy" in field_values
         return [{"run_accession": "ERR1234"}]
 
-    client.search_async = fake_search_async  # type: ignore[method-assign]
+    client.search_async = fake_search_async  # type: ignore[assignment]
 
     result = await client.get_study_runs_async("PRJEB1234", fields=["run_accession"])
 

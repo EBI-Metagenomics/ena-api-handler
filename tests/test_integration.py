@@ -13,6 +13,7 @@ Split into two sections:
 from __future__ import annotations
 
 import importlib
+from enum import Enum
 
 import pytest
 from pydantic import BaseModel
@@ -32,7 +33,9 @@ ALL_PORTALS = {
 }
 
 
-def _companion_classes(result_cls: type[BaseModel]) -> tuple[type, type]:
+def _companion_classes(
+    result_cls: type[BaseModel],
+) -> tuple[type[Enum], type[ENABaseQuery]]:
     """
     Derive the Fields and Query classes from a Result class.
 
@@ -40,8 +43,8 @@ def _companion_classes(result_cls: type[BaseModel]) -> tuple[type, type]:
     """
     base_name = result_cls.__name__.removesuffix("Result")
     module = importlib.import_module(result_cls.__module__)
-    fields_cls = getattr(module, f"{base_name}Fields")
-    query_cls = getattr(module, f"{base_name}Query")
+    fields_cls: type[Enum] = getattr(module, f"{base_name}Fields")
+    query_cls: type[ENABaseQuery] = getattr(module, f"{base_name}Query")
     return fields_cls, query_cls
 
 
