@@ -48,6 +48,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
           flags: unit
+          disable_search: true
           fail_ci_if_error: false
 
       - name: Codecov - Integration
@@ -57,4 +58,5 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage-integration.xml
           flags: integration
+          disable_search: true
           fail_ci_if_error: false
