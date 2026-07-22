@@ -1,4 +1,5 @@
 [![Testing](https://github.com/EBI-Metagenomics/ena-api-handler/actions/workflows/test.yml/badge.svg)](https://github.com/EBI-Metagenomics/ena-api-handler/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/EBI-Metagenomics/ena-api-handler/branch/master/graph/badge.svg)](https://codecov.io/gh/EBI-Metagenomics/ena-api-handler)
 
 # ENA API Handler
 
