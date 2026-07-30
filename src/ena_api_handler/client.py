@@ -16,6 +16,11 @@ from ena_api_handler._processing import (
     apply_exclude,
     compute_raw_data_size,
 )
+from ena_api_handler.exceptions import (
+    ENAAvailabilityError,
+    ENAClientError,
+    ENAQueryValidationError,
+)
 from ena_api_handler.query import (
     ENABaseQuery,
     ENAQueryClause,
@@ -28,18 +33,6 @@ from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 _DEFAULT = object()  # sentinel: "use DEFAULT_FIELD_COERCIONS"
 
 _CONVENIENCE_PORTALS = (ENAPortalDataPortal.METAGENOME, ENAPortalDataPortal.ENA)
-
-
-class ENAClientError(Exception):
-    """Raised when the ENA Portal API returns an error response."""
-
-
-class ENAAvailabilityError(ENAClientError):
-    """Raised when all portals returned empty results and raise_on_empty=True."""
-
-
-class ENAQueryValidationError(ENAClientError):
-    """Raised when fields/query don't match result type for any queried portal."""
 
 
 def _query_leaves(clause: ENAQueryClause) -> list[ENAQueryClause]:
