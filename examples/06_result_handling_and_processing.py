@@ -44,7 +44,6 @@ with ENAClient() as client:
     )
     print(coerced_runs[0].run_accession, type(coerced_runs[0].base_count))
 
-    # field_coercions=None disables coercion and leaves the raw API value.
     # field_coercions=None disables that and leaves the raw API value.
     raw_runs = client.search(
         result=ENAPortalResultType.READ_RUN,
