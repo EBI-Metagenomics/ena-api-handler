@@ -28,6 +28,10 @@ def _parse_location(value: Any) -> tuple[float, float] | None:
 DEFAULT_FIELD_COERCIONS: dict[str, Callable[[Any], Any]] = {
     "base_count": lambda v: int(v) if v not in (None, "") else None,
     "read_count": lambda v: int(v) if v not in (None, "") else None,
+    "tax_id": lambda v: int(v) if v not in (None, "") else None,
+    "genetic_code": lambda v: int(v) if v not in (None, "") else None,
+    "merged_tax_id": lambda v: int(v) if v not in (None, "") else None,
+    "status": lambda v: int(v) if v not in (None, "") else None,
     "location": _parse_location,
     "location_start": _parse_location,
     "location_end": _parse_location,

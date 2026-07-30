@@ -538,7 +538,7 @@ The low-level search methods support a few useful response-processing controls.
 
 ### Field coercion
 
-By default the client coerces some fields into more useful types: `base_count`/`read_count` (numeric strings → `int`), and `location`/`location_start`/`location_end` (a `"<lat> <N|S> <lon> <E|W>"` string → a `(lat, lon)` tuple of signed floats).
+By default the client coerces some fields into more useful types: `base_count`/`read_count`/`tax_id`/`genetic_code`/`merged_tax_id`/`status` (numeric strings → `int`), and `location`/`location_start`/`location_end` (a `"<lat> <N|S> <lon> <E|W>"` string → a `(lat, lon)` tuple of signed floats).
 
 Coercion is applied via `model_copy()` after validation, so it doesn't change the model's
 declared field type. Type checkers (mypy/pyright) will still see the original declared type

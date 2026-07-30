@@ -807,6 +807,40 @@ def test_field_coercions_disabled_with_none() -> None:
     assert row.base_count == "12345"  # type: ignore[attr-defined]
 
 
+def test_taxonomy_field_coercions_applied() -> None:
+    """tax_id, genetic_code, merged_tax_id, and status are coerced to int by default."""
+    client = ENAClient()
+    client._client = _make_sync_mock(
+        200,
+        [
+            {
+                "tax_id": "9606",
+                "genetic_code": "1",
+                "merged_tax_id": "9605",
+                "status": "1",
+            }
+        ],
+    )
+
+    results = client.search(result=_result_type(), query=_Q())
+    row = results[0]
+    assert row.tax_id == 9606  # type: ignore[attr-defined]
+    assert row.genetic_code == 1  # type: ignore[attr-defined]
+    assert row.merged_tax_id == 9605  # type: ignore[attr-defined]
+    assert row.status == 1  # type: ignore[attr-defined]
+
+
+def test_taxonomy_field_coercions_disabled_with_none() -> None:
+    """Passing field_coercions=None leaves tax_id and friends as raw strings."""
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{"tax_id": "9606", "status": "1"}])
+
+    results = client.search(result=_result_type(), query=_Q(), field_coercions=None)
+    row = results[0]
+    assert row.tax_id == "9606"  # type: ignore[attr-defined]
+    assert row.status == "1"  # type: ignore[attr-defined]
+
+
 def test_location_coercion_applies_to_all_three_fields() -> None:
     """location/location_start/location_end are all coerced to signed (lat, lon) tuples."""
     client = ENAClient()
