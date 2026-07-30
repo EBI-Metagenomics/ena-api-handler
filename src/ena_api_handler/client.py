@@ -24,8 +24,6 @@ from ena_api_handler.exceptions import (
 from ena_api_handler.query import (
     ENABaseQuery,
     ENAQueryClause,
-    ENAQueryNot,
-    ENAQueryPair,
     ENARawQuery,
 )
 from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
@@ -33,15 +31,6 @@ from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 _DEFAULT = object()  # sentinel: "use DEFAULT_FIELD_COERCIONS"
 
 _CONVENIENCE_PORTALS = (ENAPortalDataPortal.METAGENOME, ENAPortalDataPortal.ENA)
-
-
-def _query_leaves(clause: ENAQueryClause) -> list[ENAQueryClause]:
-    """Recursively walk a composed query tree and return its leaf clauses."""
-    if isinstance(clause, ENAQueryPair):
-        return _query_leaves(clause.left) + _query_leaves(clause.right)
-    if isinstance(clause, ENAQueryNot):
-        return _query_leaves(clause.clause)
-    return [clause]
 
 
 def _portal_types_match(
@@ -59,7 +48,7 @@ def _portal_types_match(
 
     expected_query_cls = QUERY_MODELS.get((portal, result))
     if expected_query_cls is not None:
-        for leaf in _query_leaves(query):
+        for leaf in query.leaves():
             if isinstance(leaf, ENABaseQuery) and not isinstance(
                 leaf, expected_query_cls
             ):

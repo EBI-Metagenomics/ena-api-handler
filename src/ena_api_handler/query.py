@@ -16,6 +16,9 @@ class ENAQueryClause:
     def to_query_string(self) -> str:
         raise NotImplementedError
 
+    def leaves(self) -> list[ENAQueryClause]:
+        return [self]
+
     def __and__(self, other: ENAQueryClause) -> ENAQueryPair:
         return ENAQueryPair(self, other, ENAQueryOperator.AND)
 
@@ -39,6 +42,9 @@ class ENAQueryPair(ENAQueryClause):
         self.right = right
         self.operator = operator
 
+    def leaves(self) -> list[ENAQueryClause]:
+        return self.left.leaves() + self.right.leaves()
+
     def to_query_string(self) -> str:
         return (
             f"({self.left.to_query_string()}"
@@ -52,6 +58,9 @@ class ENAQueryNot(ENAQueryClause):
 
     def __init__(self, clause: ENAQueryClause) -> None:
         self.clause = clause
+
+    def leaves(self) -> list[ENAQueryClause]:
+        return self.clause.leaves()
 
     def to_query_string(self) -> str:
         return f"NOT {self.clause.to_query_string()}"
