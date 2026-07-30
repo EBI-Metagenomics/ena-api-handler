@@ -10,6 +10,36 @@ from typing import Any
 import httpx
 from pydantic import BaseModel
 
+from ena_api_handler._convenience import (
+    CONVENIENCE_PORTALS as _CONVENIENCE_PORTALS,
+)
+from ena_api_handler._convenience import (
+    STUDY_AVAILABILITY_RESULT_TYPES as _STUDY_AVAILABILITY_RESULT_TYPES,
+)
+from ena_api_handler._convenience import (
+    STUDY_RESULT_TYPE_ALIASES as _STUDY_RESULT_TYPE_ALIASES,
+)
+from ena_api_handler._convenience import (
+    accession_query as _accession_query,
+)
+from ena_api_handler._convenience import (
+    filter_by_field as _filter_by_field,
+)
+from ena_api_handler._convenience import (
+    sample_accession_query as _sample_accession_query,
+)
+from ena_api_handler._convenience import (
+    study_assemblies_query as _study_assemblies_query,
+)
+from ena_api_handler._convenience import (
+    study_runs_search_args as _study_runs_search_args,
+)
+from ena_api_handler._convenience import (
+    updated_query as _updated_query,
+)
+from ena_api_handler._convenience import (
+    updated_tpa_query as _updated_tpa_query,
+)
 from ena_api_handler._processing import (
     DEFAULT_FIELD_COERCIONS,
     apply_aliases,
@@ -36,21 +66,6 @@ from ena_api_handler.query import (
 from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 
 _DEFAULT = object()  # sentinel: "use DEFAULT_FIELD_COERCIONS"
-
-_CONVENIENCE_PORTALS = (ENAPortalDataPortal.METAGENOME, ENAPortalDataPortal.ENA)
-
-
-def _normalize_cutoff_date(cutoff_date: str | date | datetime) -> str:
-    """Validate and normalize a cutoff date to an ISO ``YYYY-MM-DD`` string.
-
-    Accepts a ``date``, ``datetime`` (truncated to its date), or an ISO
-    ``YYYY-MM-DD`` string. Raises ``ValueError`` on any other format.
-    """
-    if isinstance(cutoff_date, datetime):
-        return cutoff_date.date().isoformat()
-    if isinstance(cutoff_date, date):
-        return cutoff_date.isoformat()
-    return date.fromisoformat(cutoff_date).isoformat()
 
 
 def _portal_types_match(
@@ -447,31 +462,8 @@ class ENAClient:
         Tries READ_RUN, READ_STUDY, ANALYSIS_STUDY, then STUDY result types
         across METAGENOME and ENA portals, returning the first match.
         """
-        if not primary_accession and not secondary_accession:
-            raise ValueError(
-                "Either primary_accession or secondary_accession must be provided"
-            )
-
-        query_parts: list[ENAQueryClause] = []
-        if primary_accession:
-            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
-        if secondary_accession:
-            query_parts.append(
-                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
-            )
-
-        query: ENABaseQuery | ENAQueryClause = query_parts[0]
-        for part in query_parts[1:]:
-            query = query | part
-
-        for result_type, aliases in [
-            (ENAPortalResultType.READ_STUDY, None),
-            (ENAPortalResultType.ANALYSIS_STUDY, None),
-            (
-                ENAPortalResultType.STUDY,
-                {"study_description": "description", "study_name": "study_alias"},
-            ),
-        ]:
+        query = _accession_query(primary_accession, secondary_accession)
+        for result_type, aliases in _STUDY_RESULT_TYPE_ALIASES:
             rows = self.search(
                 result=result_type,
                 query=query,
@@ -499,29 +491,9 @@ class ENAClient:
         METAGENOME and ENA portals (same order as ``get_study()``), first
         unauthenticated, then with ``auth`` if nothing was found publicly.
         """
-        if not primary_accession and not secondary_accession:
-            raise ValueError(
-                "Either primary_accession or secondary_accession must be provided"
-            )
-
-        query_parts: list[ENAQueryClause] = []
-        if primary_accession:
-            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
-        if secondary_accession:
-            query_parts.append(
-                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
-            )
-
-        query: ENABaseQuery | ENAQueryClause = query_parts[0]
-        for part in query_parts[1:]:
-            query = query | part
-
+        query = _accession_query(primary_accession, secondary_accession)
         for probe_auth in (None, auth):
-            for result_type in (
-                ENAPortalResultType.READ_STUDY,
-                ENAPortalResultType.ANALYSIS_STUDY,
-                ENAPortalResultType.STUDY,
-            ):
+            for result_type in _STUDY_AVAILABILITY_RESULT_TYPES:
                 rows = self.search(
                     result=result_type,
                     query=query,
@@ -543,12 +515,9 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a sample by accession or secondary accession."""
-        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
-            f'secondary_sample_accession="{sample_accession}"'
-        )
         rows = self.search(
             result=ENAPortalResultType.SAMPLE,
-            query=query,
+            query=_sample_accession_query(sample_accession),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             raise_on_empty=True,
@@ -562,12 +531,9 @@ class ENAClient:
         result: Enum | None = None,
     ) -> set[str]:
         """Fetch the set of secondary_study_accession values linked to a sample."""
-        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
-            f'secondary_sample_accession="{sample_accession}"'
-        )
         rows = self.search(
             result=result or ENAPortalResultType.READ_RUN,
-            query=query,
+            query=_sample_accession_query(sample_accession),
             fields=["secondary_study_accession"],
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -611,20 +577,9 @@ class ENAClient:
         filter_accessions:
             If given, only return runs whose ``run_accession`` is in this list.
         """
-        query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
-            f'secondary_study_accession="{study_accession}"'
+        query, search_fields, exclude = _study_runs_search_args(
+            study_accession, fields, filter_assembly_runs
         )
-        search_fields = list(fields) if fields is not None else None
-        if (
-            filter_assembly_runs
-            and search_fields is not None
-            and all(
-                (f.value if isinstance(f, Enum) else f) != "library_strategy"
-                for f in search_fields
-            )
-        ):
-            search_fields.append("library_strategy")
-        exclude = {"library_strategy": "AMPLICON"} if filter_assembly_runs else None
         rows = self.search(
             result=ENAPortalResultType.READ_RUN,
             query=query,
@@ -635,11 +590,7 @@ class ENAClient:
         )
         rows = _attach_raw_data_size(rows)
         if filter_accessions:
-            rows = [
-                r
-                for r in rows
-                if getattr(r, "run_accession", None) in filter_accessions
-            ]
+            rows = _filter_by_field(rows, "run_accession", filter_accessions)
         return rows
 
     def get_study_assemblies(
@@ -660,24 +611,15 @@ class ENAClient:
         allow_non_primary_assembly:
             If False (default), restricts to ``assembly_type="primary metagenome"``.
         """
-        query: ENABaseQuery | ENAQueryClause = ENARawQuery(
-            f'study_accession="{study_accession}"'
-        ) | ENARawQuery(f'secondary_study_accession="{study_accession}"')
-        if not allow_non_primary_assembly:
-            query = query & ENARawQuery('assembly_type="primary metagenome"')
         rows = self.search(
             result=ENAPortalResultType.ANALYSIS,
-            query=query,
+            query=_study_assemblies_query(study_accession, allow_non_primary_assembly),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
         )
         if filter_accessions:
-            rows = [
-                r
-                for r in rows
-                if getattr(r, "analysis_accession", None) in filter_accessions
-            ]
+            rows = _filter_by_field(rows, "analysis_accession", filter_accessions)
         return rows
 
     def get_assembly(
@@ -716,10 +658,9 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.STUDY,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -731,10 +672,9 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.READ_RUN,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -746,10 +686,9 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.ANALYSIS,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -761,13 +700,9 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch primary-metagenome assemblies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
-        query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
-            'assembly_type="primary metagenome"'
-        )
         return self.search(
             result=ENAPortalResultType.ANALYSIS,
-            query=query,
+            query=_updated_tpa_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -784,34 +719,10 @@ class ENAClient:
         """
         Fetch a study by accession, trying multiple result types in order.
 
-        Tries READ_RUN, READ_STUDY, ANALYSIS_STUDY, then STUDY result types
-        across METAGENOME and ENA portals, returning the first match.
+        Async version of :meth:`get_study`.
         """
-        if not primary_accession and not secondary_accession:
-            raise ValueError(
-                "Either primary_accession or secondary_accession must be provided"
-            )
-
-        query_parts: list[ENAQueryClause] = []
-        if primary_accession:
-            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
-        if secondary_accession:
-            query_parts.append(
-                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
-            )
-
-        query: ENABaseQuery | ENAQueryClause = query_parts[0]
-        for part in query_parts[1:]:
-            query = query | part
-
-        for result_type, aliases in [
-            (ENAPortalResultType.READ_STUDY, None),
-            (ENAPortalResultType.ANALYSIS_STUDY, None),
-            (
-                ENAPortalResultType.STUDY,
-                {"study_description": "description", "study_name": "study_alias"},
-            ),
-        ]:
+        query = _accession_query(primary_accession, secondary_accession)
+        for result_type, aliases in _STUDY_RESULT_TYPE_ALIASES:
             rows = await self.search_async(
                 result=result_type,
                 query=query,
@@ -832,37 +743,11 @@ class ENAClient:
         auth: httpx.Auth,
     ) -> ENAAvailability:
         """
-        Determine whether a study is public, privately accessible with
-        ``auth``, or unavailable under either.
-
-        Tries READ_STUDY, ANALYSIS_STUDY, then STUDY result types across
-        METAGENOME and ENA portals (same order as ``get_study_async()``),
-        first unauthenticated, then with ``auth`` if nothing was found
-        publicly.
+        Async version of :meth:`check_study_availability`.
         """
-        if not primary_accession and not secondary_accession:
-            raise ValueError(
-                "Either primary_accession or secondary_accession must be provided"
-            )
-
-        query_parts: list[ENAQueryClause] = []
-        if primary_accession:
-            query_parts.append(ENARawQuery(f'study_accession="{primary_accession}"'))
-        if secondary_accession:
-            query_parts.append(
-                ENARawQuery(f'secondary_study_accession="{secondary_accession}"')
-            )
-
-        query: ENABaseQuery | ENAQueryClause = query_parts[0]
-        for part in query_parts[1:]:
-            query = query | part
-
+        query = _accession_query(primary_accession, secondary_accession)
         for probe_auth in (None, auth):
-            for result_type in (
-                ENAPortalResultType.READ_STUDY,
-                ENAPortalResultType.ANALYSIS_STUDY,
-                ENAPortalResultType.STUDY,
-            ):
+            for result_type in _STUDY_AVAILABILITY_RESULT_TYPES:
                 rows = await self.search_async(
                     result=result_type,
                     query=query,
@@ -883,13 +768,10 @@ class ENAClient:
         sample_accession: str,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
-        """Fetch a sample by accession or secondary accession."""
-        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
-            f'secondary_sample_accession="{sample_accession}"'
-        )
+        """Async version of :meth:`get_sample`."""
         rows = await self.search_async(
             result=ENAPortalResultType.SAMPLE,
-            query=query,
+            query=_sample_accession_query(sample_accession),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             raise_on_empty=True,
@@ -902,13 +784,10 @@ class ENAClient:
         sample_accession: str,
         result: Enum | None = None,
     ) -> set[str]:
-        """Fetch the set of secondary_study_accession values linked to a sample."""
-        query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
-            f'secondary_sample_accession="{sample_accession}"'
-        )
+        """Async version of :meth:`get_sample_studies`."""
         rows = await self.search_async(
             result=result or ENAPortalResultType.READ_RUN,
-            query=query,
+            query=_sample_accession_query(sample_accession),
             fields=["secondary_study_accession"],
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -924,7 +803,7 @@ class ENAClient:
         run_accession: str,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
-        """Fetch a single run by accession."""
+        """Async version of :meth:`get_run`."""
         rows = await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f'run_accession="{run_accession}"'),
@@ -942,30 +821,10 @@ class ENAClient:
         filter_assembly_runs: bool = True,
         filter_accessions: list[str] | None = None,
     ) -> list[BaseModel]:
-        """
-        Fetch all runs for a study.
-
-        Parameters
-        ----------
-        filter_assembly_runs:
-            Exclude runs with ``library_strategy="AMPLICON"`` (default: True).
-        filter_accessions:
-            If given, only return runs whose ``run_accession`` is in this list.
-        """
-        query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
-            f'secondary_study_accession="{study_accession}"'
+        """Async version of :meth:`get_study_runs`."""
+        query, search_fields, exclude = _study_runs_search_args(
+            study_accession, fields, filter_assembly_runs
         )
-        search_fields = list(fields) if fields is not None else None
-        if (
-            filter_assembly_runs
-            and search_fields is not None
-            and all(
-                (f.value if isinstance(f, Enum) else f) != "library_strategy"
-                for f in search_fields
-            )
-        ):
-            search_fields.append("library_strategy")
-        exclude = {"library_strategy": "AMPLICON"} if filter_assembly_runs else None
         rows = await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=query,
@@ -976,11 +835,7 @@ class ENAClient:
         )
         rows = _attach_raw_data_size(rows)
         if filter_accessions:
-            rows = [
-                r
-                for r in rows
-                if getattr(r, "run_accession", None) in filter_accessions
-            ]
+            rows = _filter_by_field(rows, "run_accession", filter_accessions)
         return rows
 
     async def get_study_assemblies_async(
@@ -990,35 +845,16 @@ class ENAClient:
         filter_accessions: list[str] | None = None,
         allow_non_primary_assembly: bool = False,
     ) -> list[BaseModel]:
-        """
-        Fetch assemblies for a study.
-
-        Parameters
-        ----------
-        filter_accessions:
-            If given, only return assemblies whose ``analysis_accession`` is in
-            this list.
-        allow_non_primary_assembly:
-            If False (default), restricts to ``assembly_type="primary metagenome"``.
-        """
-        query: ENABaseQuery | ENAQueryClause = ENARawQuery(
-            f'study_accession="{study_accession}"'
-        ) | ENARawQuery(f'secondary_study_accession="{study_accession}"')
-        if not allow_non_primary_assembly:
-            query = query & ENARawQuery('assembly_type="primary metagenome"')
+        """Async version of :meth:`get_study_assemblies`."""
         rows = await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
-            query=query,
+            query=_study_assemblies_query(study_accession, allow_non_primary_assembly),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
         )
         if filter_accessions:
-            rows = [
-                r
-                for r in rows
-                if getattr(r, "analysis_accession", None) in filter_accessions
-            ]
+            rows = _filter_by_field(rows, "analysis_accession", filter_accessions)
         return rows
 
     async def get_assembly_async(
@@ -1026,7 +862,7 @@ class ENAClient:
         assembly_accession: str,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
-        """Fetch a single assembly by analysis accession."""
+        """Async version of :meth:`get_assembly`."""
         rows = await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'analysis_accession="{assembly_accession}"'),
@@ -1041,7 +877,7 @@ class ENAClient:
         sample_name: str,
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
-        """Fetch an assembly by sample accession."""
+        """Async version of :meth:`get_assembly_from_sample`."""
         rows = await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'sample_accession="{sample_name}"'),
@@ -1056,11 +892,10 @@ class ENAClient:
         cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
+        """Async version of :meth:`get_updated_studies`."""
         return await self.search_async(
             result=ENAPortalResultType.STUDY,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -1071,11 +906,10 @@ class ENAClient:
         cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
+        """Async version of :meth:`get_updated_runs`."""
         return await self.search_async(
             result=ENAPortalResultType.READ_RUN,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -1086,11 +920,10 @@ class ENAClient:
         cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
+        """Async version of :meth:`get_updated_assemblies`."""
         return await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
-            query=ENARawQuery(f"last_updated>={cutoff_date}"),
+            query=_updated_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
@@ -1101,14 +934,10 @@ class ENAClient:
         cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch primary-metagenome assemblies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
-        cutoff_date = _normalize_cutoff_date(cutoff_date)
-        query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
-            'assembly_type="primary metagenome"'
-        )
+        """Async version of :meth:`get_updated_tpa_assemblies`."""
         return await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
-            query=query,
+            query=_updated_tpa_query(cutoff_date),
             fields=fields,
             portals=_CONVENIENCE_PORTALS,
             limit=0,
