@@ -32,7 +32,6 @@ class _Q(ENABaseQuery):
     study_accession: str | None = None
 
 
-# TODO: Replace mocks with https://github.com/Colin-b/pytest_httpx
 def _make_sync_mock(
     status_code: int,
     json_data: Any = None,

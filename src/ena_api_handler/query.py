@@ -105,6 +105,3 @@ class ENABaseQuery(BaseModel, ENAQueryClause):
             for field, value in self.model_dump(exclude_none=True).items()
         ]
         return " AND ".join(parts)
-
-
-# TODO: Add a 'timedelta' based query class
