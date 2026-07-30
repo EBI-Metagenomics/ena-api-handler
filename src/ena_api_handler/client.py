@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import warnings
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
@@ -37,6 +38,19 @@ from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 _DEFAULT = object()  # sentinel: "use DEFAULT_FIELD_COERCIONS"
 
 _CONVENIENCE_PORTALS = (ENAPortalDataPortal.METAGENOME, ENAPortalDataPortal.ENA)
+
+
+def _normalize_cutoff_date(cutoff_date: str | date | datetime) -> str:
+    """Validate and normalize a cutoff date to an ISO ``YYYY-MM-DD`` string.
+
+    Accepts a ``date``, ``datetime`` (truncated to its date), or an ISO
+    ``YYYY-MM-DD`` string. Raises ``ValueError`` on any other format.
+    """
+    if isinstance(cutoff_date, datetime):
+        return cutoff_date.date().isoformat()
+    if isinstance(cutoff_date, date):
+        return cutoff_date.isoformat()
+    return date.fromisoformat(cutoff_date).isoformat()
 
 
 def _portal_types_match(
@@ -698,10 +712,11 @@ class ENAClient:
 
     def get_updated_studies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.STUDY,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -712,10 +727,11 @@ class ENAClient:
 
     def get_updated_runs(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -726,10 +742,11 @@ class ENAClient:
 
     def get_updated_assemblies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return self.search(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -740,10 +757,11 @@ class ENAClient:
 
     def get_updated_tpa_assemblies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch primary-metagenome assemblies updated on or after ``cutoff_date``."""
+        """Fetch primary-metagenome assemblies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
             'assembly_type="primary metagenome"'
         )
@@ -1035,10 +1053,11 @@ class ENAClient:
 
     async def get_updated_studies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return await self.search_async(
             result=ENAPortalResultType.STUDY,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1049,10 +1068,11 @@ class ENAClient:
 
     async def get_updated_runs_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1063,10 +1083,11 @@ class ENAClient:
 
     async def get_updated_assemblies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
+        """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         return await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1077,10 +1098,11 @@ class ENAClient:
 
     async def get_updated_tpa_assemblies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
-        """Fetch primary-metagenome assemblies updated on or after ``cutoff_date``."""
+        """Fetch primary-metagenome assemblies updated on or after ``cutoff_date`` (``YYYY-MM-DD`` string, or a ``date``/``datetime``)."""
+        cutoff_date = _normalize_cutoff_date(cutoff_date)
         query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
             'assembly_type="primary metagenome"'
         )

@@ -3,6 +3,7 @@
 # runtime module stays free of the generated @overload block.
 from __future__ import annotations
 
+from datetime import date, datetime
 from enum import Enum
 from typing import Any, overload
 
@@ -2045,22 +2046,22 @@ class ENAClient:
     ) -> MetagenomeAnalysisResult | ENAAnalysisResult | None: ...
     def get_updated_studies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeStudyResult | ENAStudyResult]: ...
     def get_updated_runs(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeReadRunResult | ENAReadRunResult]: ...
     def get_updated_assemblies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
     def get_updated_tpa_assemblies(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
     def check_study_availability(
@@ -2125,22 +2126,22 @@ class ENAClient:
     ) -> MetagenomeAnalysisResult | ENAAnalysisResult | None: ...
     async def get_updated_studies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeStudyResult | ENAStudyResult]: ...
     async def get_updated_runs_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeReadRunResult | ENAReadRunResult]: ...
     async def get_updated_assemblies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
     async def get_updated_tpa_assemblies_async(
         self,
-        cutoff_date: str,
+        cutoff_date: str | date | datetime,
         fields: list[Enum | str] | None = ...,
     ) -> list[MetagenomeAnalysisResult | ENAAnalysisResult]: ...
     async def check_study_availability_async(

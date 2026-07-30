@@ -204,6 +204,35 @@ def test_get_study_supports_secondary_accession_only() -> None:
     assert calls[0]["query"].to_query_string() == 'secondary_study_accession="ERP1234"'
 
 
+def test_get_updated_studies_normalizes_cutoff_date() -> None:
+    from datetime import date, datetime  # noqa: PLC0415
+
+    client = ENAClient()
+    calls: list[Any] = []
+
+    def fake_search(**kwargs: Any) -> list[dict[str, str]]:
+        calls.append(kwargs["query"].to_query_string())
+        return []
+
+    client.search = fake_search  # type: ignore[assignment]
+
+    client.get_updated_studies("2024-01-01")
+    client.get_updated_studies(date(2024, 1, 1))
+    client.get_updated_studies(datetime(2024, 1, 1, 12, 30))
+
+    assert calls == ["last_updated>=2024-01-01"] * 3
+
+
+def test_get_updated_studies_rejects_malformed_cutoff_date() -> None:
+    client = ENAClient()
+    client.search = MagicMock()  # type: ignore[assignment]
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        client.get_updated_studies("01/01/2024")
+
+    client.search.assert_not_called()
+
+
 def test_get_study_prefers_study_level_results_over_runs() -> None:
     client = ENAClient()
     calls: list[Any] = []

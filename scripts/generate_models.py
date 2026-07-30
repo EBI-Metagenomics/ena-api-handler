@@ -623,7 +623,7 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         (
             "get_updated_studies",
             [
-                "        cutoff_date: str,",
+                "        cutoff_date: str | date | datetime,",
                 "        fields: list[Enum | str] | None = ...,",
             ],
             f"list[{union(['study'])}]",
@@ -631,7 +631,7 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         (
             "get_updated_runs",
             [
-                "        cutoff_date: str,",
+                "        cutoff_date: str | date | datetime,",
                 "        fields: list[Enum | str] | None = ...,",
             ],
             f"list[{union(['read_run'])}]",
@@ -639,7 +639,7 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         (
             "get_updated_assemblies",
             [
-                "        cutoff_date: str,",
+                "        cutoff_date: str | date | datetime,",
                 "        fields: list[Enum | str] | None = ...,",
             ],
             f"list[{union(['analysis'])}]",
@@ -647,7 +647,7 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         (
             "get_updated_tpa_assemblies",
             [
-                "        cutoff_date: str,",
+                "        cutoff_date: str | date | datetime,",
                 "        fields: list[Enum | str] | None = ...,",
             ],
             f"list[{union(['analysis'])}]",
@@ -670,6 +670,7 @@ def generate_client_stub(portal_results: dict[str, list[str]]) -> str:
         "# runtime module stays free of the generated @overload block.",
         "from __future__ import annotations",
         "",
+        "from datetime import date, datetime",
         "from enum import Enum",
         "from typing import Any, overload",
         "",
