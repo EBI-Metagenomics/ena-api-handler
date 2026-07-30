@@ -1045,3 +1045,69 @@ def test_download_runs_raises_not_implemented() -> None:
     with pytest.warns(DeprecationWarning):
         with pytest.raises(NotImplementedError):
             client.download_runs([])
+
+
+# ── Nested query composition ────────────────────────────────────────────────────
+
+
+class _NestedQ(ENABaseQuery):
+    """Query double with multiple fields for nested-clause composition tests."""
+
+    study_accession: str | None = None
+    secondary_study_accession: str | None = None
+    study_title: str | None = None
+    library_strategy: str | None = None
+    instrument_platform: str | None = None
+
+
+def test_nested_or_and_not_query_renders_correctly() -> None:
+    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
+
+    q = (
+        (_NestedQ(study_accession="ERP1") | _NestedQ(secondary_study_accession="ERP1"))
+        | _NestedQ(study_title="something")
+    ) & (ENARawQuery('something="bla"') | ~ENARawQuery('something_else="whatever"'))
+
+    assert q.to_query_string() == (
+        '(((study_accession="ERP1" OR secondary_study_accession="ERP1") '
+        'OR study_title="something") AND (something="bla" OR NOT something_else="whatever"))'
+    )
+
+
+def test_deeply_nested_query_with_real_fields() -> None:
+    q = (
+        (_NestedQ(study_accession="ERP1") | _NestedQ(secondary_study_accession="ERP1"))
+        | _NestedQ(study_title="something")
+    ) & (
+        _NestedQ(library_strategy="AMPLICON")
+        | ~_NestedQ(instrument_platform="ILLUMINA")
+    )
+
+    assert q.to_query_string() == (
+        '(((study_accession="ERP1" OR secondary_study_accession="ERP1") '
+        'OR study_title="something") AND (library_strategy="AMPLICON" '
+        'OR NOT instrument_platform="ILLUMINA"))'
+    )
+
+
+def test_not_of_nested_pair_wraps_correctly() -> None:
+    a = _NestedQ(study_accession="ERP1")
+    b = _NestedQ(secondary_study_accession="ERP1")
+
+    assert (~(a | b)).to_query_string() == (
+        'NOT (study_accession="ERP1" OR secondary_study_accession="ERP1")'
+    )
+    assert (~a | b).to_query_string() == (
+        '(NOT study_accession="ERP1" OR secondary_study_accession="ERP1")'
+    )
+
+
+def test_leaves_returns_flat_list_for_nested_clause() -> None:
+    a = _NestedQ(study_accession="ERP1")
+    b = _NestedQ(secondary_study_accession="ERP1")
+    c = _NestedQ(study_title="something")
+    d = _NestedQ(library_strategy="AMPLICON")
+
+    q = ((a | b) | c) & (d | ~a)
+
+    assert q.leaves() == [a, b, c, d, a]

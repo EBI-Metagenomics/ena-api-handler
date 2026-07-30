@@ -208,3 +208,52 @@ def test_live_field_filtering_is_respected() -> None:
         "fastq_ftp was populated even though it was not requested — "
         "fields parameter may not be reaching the API correctly"
     )
+
+
+@pytest.mark.integration
+def test_live_nested_query_matches_via_or_and_not_branches() -> None:
+    """A deeply nested (OR (OR)) AND (OR NOT) query is correctly parenthesized
+    and honored by the real ENA Portal API.
+
+    The query is deliberately built so a match is only reachable via the
+    nested secondary_study_accession branch and the NOT branch — every other
+    branch uses a value that cannot match. If parenthesization or operator
+    precedence were mishandled, wrong rows could creep into the results.
+    """
+    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
+    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
+
+    query = (
+        (
+            ENAReadRunQuery(study_accession="WRONG_ACCESSION")
+            | ENAReadRunQuery(secondary_study_accession="ERP001736")
+        )
+        | ENAReadRunQuery(study_title="WRONG_TITLE")
+    ) & (
+        ENAReadRunQuery(library_strategy="WRONG_STRATEGY")
+        | ~ENARawQuery('instrument_platform="OXFORD_NANOPORE"')
+    )
+
+    with ENAClient() as client:
+        results = client.search(
+            result=ENAPortalResultType.READ_RUN,
+            query=query,
+            fields=[
+                ENAReadRunFields.RUN_ACCESSION,
+                ENAReadRunFields.STUDY_ACCESSION,
+                ENAReadRunFields.SECONDARY_STUDY_ACCESSION,
+                ENAReadRunFields.INSTRUMENT_PLATFORM,
+            ],
+            portals=(ENAPortalDataPortal.ENA,),
+            limit=20,
+        )
+
+    assert len(results) > 0
+    for row in results:
+        # Only reachable via secondary_study_accession — study_accession and
+        # study_title were both given deliberately wrong values.
+        assert row.study_accession == "PRJEB1787"  # type: ignore[attr-defined]
+        assert row.secondary_study_accession == "ERP001736"  # type: ignore[attr-defined]
+        # Only reachable via NOT — library_strategy was given a deliberately
+        # wrong value, so every row must satisfy the negated clause.
+        assert row.instrument_platform != "OXFORD_NANOPORE"  # type: ignore[attr-defined]
