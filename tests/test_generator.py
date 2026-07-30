@@ -7,6 +7,7 @@ fixture snapshots written to a temp directory.  They do not touch the real
 
 from __future__ import annotations
 
+import ast
 import json
 import sys
 from pathlib import Path
@@ -267,8 +268,6 @@ _STUB_PORTAL_RESULTS = {
 
 
 def test_generate_client_stub_parses_as_python() -> None:
-    import ast
-
     source = gm.generate_client_stub(_STUB_PORTAL_RESULTS)
     ast.parse(source)
 

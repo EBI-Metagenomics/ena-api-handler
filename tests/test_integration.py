@@ -20,7 +20,8 @@ from pydantic import BaseModel
 
 from ena_api_handler import ENAClient
 from ena_api_handler.models import RESULT_MODELS, ENAPortalResultType
-from ena_api_handler.query import ENABaseQuery
+from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery
+from ena_api_handler.query import ENABaseQuery, ENARawQuery
 from ena_api_handler.types import ENAPortalDataPortal
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -87,8 +88,6 @@ def test_query_model_is_enabasequery_subclass(key: tuple) -> None:
 
 @pytest.mark.parametrize("key", list(RESULT_MODELS.keys()))
 def test_fields_enum_is_str_and_enum(key: tuple) -> None:
-    from enum import Enum  # noqa: PLC0415
-
     result_cls = RESULT_MODELS[key]
     fields_cls, _ = _companion_classes(result_cls)
     assert issubclass(fields_cls, str)
@@ -138,8 +137,6 @@ _LIVE_STUDY = "PRJEB1787"
 
 @pytest.mark.integration
 def test_live_sync_search_returns_results() -> None:
-    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
-
     client = ENAClient()
     results = client.search(
         result=ENAPortalResultType.READ_RUN,
@@ -155,8 +152,6 @@ def test_live_sync_search_returns_results() -> None:
 
 @pytest.mark.integration
 def test_live_sync_search_results_are_typed() -> None:
-    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
-
     with ENAClient() as client:
         results = client.search(
             result=ENAPortalResultType.READ_RUN,
@@ -171,8 +166,6 @@ def test_live_sync_search_results_are_typed() -> None:
 
 @pytest.mark.integration
 async def test_live_search_async_returns_results() -> None:
-    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
-
     async with ENAClient() as client:
         results = await client.search_async(
             result=ENAPortalResultType.READ_RUN,
@@ -189,7 +182,6 @@ async def test_live_search_async_returns_results() -> None:
 @pytest.mark.integration
 def test_live_field_filtering_is_respected() -> None:
     """Requesting only run_accession should not return other fields like fastq_ftp."""
-    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
 
     with ENAClient() as client:
         results = client.search(
@@ -220,8 +212,6 @@ def test_live_nested_query_matches_via_or_and_not_branches() -> None:
     branch uses a value that cannot match. If parenthesization or operator
     precedence were mishandled, wrong rows could creep into the results.
     """
-    from ena_api_handler.models.ena.read_run import ENAReadRunFields, ENAReadRunQuery  # noqa: PLC0415
-    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
 
     query = (
         (

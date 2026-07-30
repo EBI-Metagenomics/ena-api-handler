@@ -5,6 +5,7 @@ All HTTP calls are mocked — no network required.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -13,10 +14,12 @@ import httpx
 import pytest
 from pydantic import BaseModel
 
+import ena_api_handler.client as ena_client_module
 from ena_api_handler import ENAClient, ENAClientError
 from ena_api_handler._processing import compute_raw_data_size
 from ena_api_handler.client import ENAAvailabilityError, ENAQueryValidationError
-from ena_api_handler.query import ENABaseQuery
+from ena_api_handler.models import ENAPortalResultType
+from ena_api_handler.query import ENABaseQuery, ENARawQuery
 from ena_api_handler.types import ENAAvailability, ENAPortalDataPortal
 
 
@@ -65,9 +68,6 @@ def _make_async_mock(
 
 
 def _result_type():
-    """Return ENAPortalResultType.READ_RUN without importing at module level."""
-    from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
     return ENAPortalResultType.READ_RUN
 
 
@@ -79,10 +79,8 @@ def _no_type_validation_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     so fields/query type validation doesn't interfere; tests that specifically
     exercise validation monkeypatch these registries themselves.
     """
-    import ena_api_handler.client as client  # noqa: PLC0415
-
-    monkeypatch.setattr(client, "QUERY_MODELS", {}, raising=False)
-    monkeypatch.setattr(client, "FIELDS_MODELS", {}, raising=False)
+    monkeypatch.setattr(ena_client_module, "QUERY_MODELS", {}, raising=False)
+    monkeypatch.setattr(ena_client_module, "FIELDS_MODELS", {}, raising=False)
 
 
 # ── Sync tests ────────────────────────────────────────────────────────────────
@@ -205,8 +203,6 @@ def test_get_study_supports_secondary_accession_only() -> None:
 
 
 def test_get_updated_studies_normalizes_cutoff_date() -> None:
-    from datetime import date, datetime  # noqa: PLC0415
-
     client = ENAClient()
     calls: list[Any] = []
 
@@ -362,8 +358,6 @@ def test_get_sample_studies_accepts_explicit_result_type() -> None:
         return []
 
     client.search = fake_search  # type: ignore[assignment]
-
-    from ena_api_handler.models import ENAPortalResultType
 
     client.get_sample_studies("SAMN11835464", result=ENAPortalResultType.ANALYSIS)
 
@@ -717,10 +711,12 @@ def _patch_registries(
     query_models: dict | None = None,
     fields_models: dict | None = None,
 ) -> None:
-    import ena_api_handler.client as client  # noqa: PLC0415
-
-    monkeypatch.setattr(client, "QUERY_MODELS", query_models or {}, raising=False)
-    monkeypatch.setattr(client, "FIELDS_MODELS", fields_models or {}, raising=False)
+    monkeypatch.setattr(
+        ena_client_module, "QUERY_MODELS", query_models or {}, raising=False
+    )
+    monkeypatch.setattr(
+        ena_client_module, "FIELDS_MODELS", fields_models or {}, raising=False
+    )
 
 
 def test_matching_typed_query_and_fields_pass_through(
@@ -793,8 +789,6 @@ def test_raw_query_and_plain_string_fields_never_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """ENARawQuery/plain field strings are exempt from validation regardless of registry."""
-    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
-
     _patch_registries(
         monkeypatch,
         query_models={(ENAPortalDataPortal.ENA, _result_type()): _OtherQ},
@@ -1061,8 +1055,6 @@ class _NestedQ(ENABaseQuery):
 
 
 def test_nested_or_and_not_query_renders_correctly() -> None:
-    from ena_api_handler.query import ENARawQuery  # noqa: PLC0415
-
     q = (
         (_NestedQ(study_accession="ERP1") | _NestedQ(secondary_study_accession="ERP1"))
         | _NestedQ(study_title="something")
