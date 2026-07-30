@@ -807,6 +807,79 @@ def test_field_coercions_disabled_with_none() -> None:
     assert row.base_count == "12345"  # type: ignore[attr-defined]
 
 
+def test_location_coercion_applies_to_all_three_fields() -> None:
+    """location/location_start/location_end are all coerced to signed (lat, lon) tuples."""
+    client = ENAClient()
+    client._client = _make_sync_mock(
+        200,
+        [
+            {
+                "location": "18.5839 N 66.4727 E",
+                "location_start": "18.5839 N 66.4727 E",
+                "location_end": "18.5839 N 66.4727 E",
+            }
+        ],
+    )
+
+    results = client.search(result=_result_type(), query=_Q())
+    row = results[0]
+    assert row.location == (18.5839, 66.4727)  # type: ignore[attr-defined]
+    assert row.location_start == (18.5839, 66.4727)  # type: ignore[attr-defined]
+    assert row.location_end == (18.5839, 66.4727)  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("18.5839 N 66.4727 E", (18.5839, 66.4727)),
+        ("18.5839 N 66.4727 W", (18.5839, -66.4727)),
+        ("18.5839 S 66.4727 E", (-18.5839, 66.4727)),
+        ("18.5839 S 66.4727 W", (-18.5839, -66.4727)),
+    ],
+)
+def test_location_coercion_hemisphere_combinations(
+    raw: str, expected: tuple[float, float]
+) -> None:
+    """All four N/S x E/W hemisphere combinations produce the correctly signed tuple."""
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{"location": raw}])
+
+    results = client.search(result=_result_type(), query=_Q())
+    row = results[0]
+    assert row.location == expected  # type: ignore[attr-defined]
+
+
+def test_location_coercion_disabled_with_none() -> None:
+    """Passing field_coercions=None leaves location as the raw string."""
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{"location": "18.5839 N 66.4727 E"}])
+
+    results = client.search(result=_result_type(), query=_Q(), field_coercions=None)
+    row = results[0]
+    assert row.location == "18.5839 N 66.4727 E"  # type: ignore[attr-defined]
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "not collected",
+        "18.5839 66.4727",
+        "18.5839 N 66.4727",
+        "18.5839 X 66.4727 E",
+        "18.5839 N 66.4727 X",
+        "abc N 66.4727 E",
+    ],
+)
+def test_location_coercion_unparseable_left_unchanged(raw: str) -> None:
+    """Unparseable location strings are silently left as the raw value."""
+    client = ENAClient()
+    client._client = _make_sync_mock(200, [{"location": raw}])
+
+    results = client.search(result=_result_type(), query=_Q())
+    row = results[0]
+    assert row.location == raw  # type: ignore[attr-defined]
+
+
 def test_field_aliases_applied() -> None:
     client = ENAClient()
     client._client = _make_sync_mock(200, [{"old_name": "value"}])

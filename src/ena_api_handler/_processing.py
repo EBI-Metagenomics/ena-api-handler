@@ -11,9 +11,26 @@ from pydantic import BaseModel
 # Applied to raw response dicts before Pydantic model validation.
 # Pass ``field_coercions=None`` to ``search()`` / ``search_async()`` to disable.
 
+
+def _parse_location(value: Any) -> tuple[float, float] | None:
+    """Parse an ENA latlon string, e.g. "18.5839 N 66.4727 E", into a signed (lat, lon) tuple."""
+    if not value:
+        return None
+    lat_str, lat_hem, lon_str, lon_hem = value.split()
+    lat_hem, lon_hem = lat_hem.upper(), lon_hem.upper()
+    if lat_hem not in ("N", "S") or lon_hem not in ("E", "W"):
+        raise ValueError(f"invalid hemisphere markers in location: {value!r}")
+    lat = float(lat_str) * (-1 if lat_hem == "S" else 1)
+    lon = float(lon_str) * (-1 if lon_hem == "W" else 1)
+    return (lat, lon)
+
+
 DEFAULT_FIELD_COERCIONS: dict[str, Callable[[Any], Any]] = {
     "base_count": lambda v: int(v) if v not in (None, "") else None,
     "read_count": lambda v: int(v) if v not in (None, "") else None,
+    "location": _parse_location,
+    "location_start": _parse_location,
+    "location_end": _parse_location,
 }
 
 
