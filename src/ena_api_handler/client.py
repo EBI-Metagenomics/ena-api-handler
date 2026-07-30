@@ -21,6 +21,12 @@ from ena_api_handler.exceptions import (
     ENAClientError,
     ENAQueryValidationError,
 )
+from ena_api_handler.models import (
+    FIELDS_MODELS,
+    QUERY_MODELS,
+    RESULT_MODELS,
+    ENAPortalResultType,
+)
 from ena_api_handler.query import (
     ENABaseQuery,
     ENAQueryClause,
@@ -44,7 +50,6 @@ def _portal_types_match(
     pair's generated Query/Fields classes. Untyped inputs (ENARawQuery, plain
     string field names) are always considered compatible.
     """
-    from ena_api_handler.models import FIELDS_MODELS, QUERY_MODELS  # noqa: PLC0415
 
     expected_query_cls = QUERY_MODELS.get((portal, result))
     if expected_query_cls is not None:
@@ -213,8 +218,6 @@ class ENAClient:
         ENAAvailabilityError
             If ``raise_on_empty=True`` and no results were found.
         """
-        from ena_api_handler.models import RESULT_MODELS  # noqa: PLC0415
-
         coercions = (
             DEFAULT_FIELD_COERCIONS if field_coercions is _DEFAULT else field_coercions
         )
@@ -344,8 +347,6 @@ class ENAClient:
         ENAAvailabilityError
             If ``raise_on_empty=True`` and no results were found.
         """
-        from ena_api_handler.models import RESULT_MODELS  # noqa: PLC0415
-
         coercions = (
             DEFAULT_FIELD_COERCIONS if field_coercions is _DEFAULT else field_coercions
         )
@@ -432,8 +433,6 @@ class ENAClient:
         Tries READ_RUN, READ_STUDY, ANALYSIS_STUDY, then STUDY result types
         across METAGENOME and ENA portals, returning the first match.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         if not primary_accession and not secondary_accession:
             raise ValueError(
                 "Either primary_accession or secondary_accession must be provided"
@@ -486,8 +485,6 @@ class ENAClient:
         METAGENOME and ENA portals (same order as ``get_study()``), first
         unauthenticated, then with ``auth`` if nothing was found publicly.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         if not primary_accession and not secondary_accession:
             raise ValueError(
                 "Either primary_accession or secondary_accession must be provided"
@@ -532,8 +529,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a sample by accession or secondary accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
             f'secondary_sample_accession="{sample_accession}"'
         )
@@ -553,8 +548,6 @@ class ENAClient:
         result: Enum | None = None,
     ) -> set[str]:
         """Fetch the set of secondary_study_accession values linked to a sample."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
             f'secondary_sample_accession="{sample_accession}"'
         )
@@ -577,8 +570,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a single run by accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = self.search(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f'run_accession="{run_accession}"'),
@@ -606,8 +597,6 @@ class ENAClient:
         filter_accessions:
             If given, only return runs whose ``run_accession`` is in this list.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
             f'secondary_study_accession="{study_accession}"'
         )
@@ -657,8 +646,6 @@ class ENAClient:
         allow_non_primary_assembly:
             If False (default), restricts to ``assembly_type="primary metagenome"``.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query: ENABaseQuery | ENAQueryClause = ENARawQuery(
             f'study_accession="{study_accession}"'
         ) | ENARawQuery(f'secondary_study_accession="{study_accession}"')
@@ -685,8 +672,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a single assembly by analysis accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = self.search(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'analysis_accession="{assembly_accession}"'),
@@ -702,8 +687,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch an assembly by sample accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = self.search(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'sample_accession="{sample_name}"'),
@@ -719,8 +702,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return self.search(
             result=ENAPortalResultType.STUDY,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -735,8 +716,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return self.search(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -751,8 +730,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return self.search(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -767,8 +744,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch primary-metagenome assemblies updated on or after ``cutoff_date``."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
             'assembly_type="primary metagenome"'
         )
@@ -794,8 +769,6 @@ class ENAClient:
         Tries READ_RUN, READ_STUDY, ANALYSIS_STUDY, then STUDY result types
         across METAGENOME and ENA portals, returning the first match.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         if not primary_accession and not secondary_accession:
             raise ValueError(
                 "Either primary_accession or secondary_accession must be provided"
@@ -849,8 +822,6 @@ class ENAClient:
         first unauthenticated, then with ``auth`` if nothing was found
         publicly.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         if not primary_accession and not secondary_accession:
             raise ValueError(
                 "Either primary_accession or secondary_accession must be provided"
@@ -895,8 +866,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a sample by accession or secondary accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
             f'secondary_sample_accession="{sample_accession}"'
         )
@@ -916,8 +885,6 @@ class ENAClient:
         result: Enum | None = None,
     ) -> set[str]:
         """Fetch the set of secondary_study_accession values linked to a sample."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'sample_accession="{sample_accession}"') | ENARawQuery(
             f'secondary_sample_accession="{sample_accession}"'
         )
@@ -940,8 +907,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a single run by accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f'run_accession="{run_accession}"'),
@@ -969,8 +934,6 @@ class ENAClient:
         filter_accessions:
             If given, only return runs whose ``run_accession`` is in this list.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f'study_accession="{study_accession}"') | ENARawQuery(
             f'secondary_study_accession="{study_accession}"'
         )
@@ -1020,8 +983,6 @@ class ENAClient:
         allow_non_primary_assembly:
             If False (default), restricts to ``assembly_type="primary metagenome"``.
         """
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query: ENABaseQuery | ENAQueryClause = ENARawQuery(
             f'study_accession="{study_accession}"'
         ) | ENARawQuery(f'secondary_study_accession="{study_accession}"')
@@ -1048,8 +1009,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch a single assembly by analysis accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'analysis_accession="{assembly_accession}"'),
@@ -1065,8 +1024,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> BaseModel | None:
         """Fetch an assembly by sample accession."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         rows = await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f'sample_accession="{sample_name}"'),
@@ -1082,8 +1039,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch studies updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return await self.search_async(
             result=ENAPortalResultType.STUDY,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1098,8 +1053,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch runs updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return await self.search_async(
             result=ENAPortalResultType.READ_RUN,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1114,8 +1067,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch analyses updated on or after ``cutoff_date`` (``YYYY-MM-DD``)."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         return await self.search_async(
             result=ENAPortalResultType.ANALYSIS,
             query=ENARawQuery(f"last_updated>={cutoff_date}"),
@@ -1130,8 +1081,6 @@ class ENAClient:
         fields: list[Enum | str] | None = None,
     ) -> list[BaseModel]:
         """Fetch primary-metagenome assemblies updated on or after ``cutoff_date``."""
-        from ena_api_handler.models import ENAPortalResultType  # noqa: PLC0415
-
         query = ENARawQuery(f"last_updated>={cutoff_date}") & ENARawQuery(
             'assembly_type="primary metagenome"'
         )

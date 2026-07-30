@@ -79,10 +79,10 @@ def _no_type_validation_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     so fields/query type validation doesn't interfere; tests that specifically
     exercise validation monkeypatch these registries themselves.
     """
-    import ena_api_handler.models as models  # noqa: PLC0415
+    import ena_api_handler.client as client  # noqa: PLC0415
 
-    monkeypatch.setattr(models, "QUERY_MODELS", {}, raising=False)
-    monkeypatch.setattr(models, "FIELDS_MODELS", {}, raising=False)
+    monkeypatch.setattr(client, "QUERY_MODELS", {}, raising=False)
+    monkeypatch.setattr(client, "FIELDS_MODELS", {}, raising=False)
 
 
 # ── Sync tests ────────────────────────────────────────────────────────────────
@@ -688,10 +688,10 @@ def _patch_registries(
     query_models: dict | None = None,
     fields_models: dict | None = None,
 ) -> None:
-    import ena_api_handler.models as models  # noqa: PLC0415
+    import ena_api_handler.client as client  # noqa: PLC0415
 
-    monkeypatch.setattr(models, "QUERY_MODELS", query_models or {}, raising=False)
-    monkeypatch.setattr(models, "FIELDS_MODELS", fields_models or {}, raising=False)
+    monkeypatch.setattr(client, "QUERY_MODELS", query_models or {}, raising=False)
+    monkeypatch.setattr(client, "FIELDS_MODELS", fields_models or {}, raising=False)
 
 
 def test_matching_typed_query_and_fields_pass_through(
