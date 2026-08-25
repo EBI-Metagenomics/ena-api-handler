@@ -5,7 +5,7 @@ description = "ENA API client"
 authors = [
     { name = "Aleksandar", email = "arjkvc@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
     "pydantic>=2.12.5",
@@ -31,7 +31,7 @@ markers = [
 ]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.11"
 plugins = ["pydantic.mypy"]
 mypy_path = "scripts"
 exclude = ["^ena_portal_api/"]
