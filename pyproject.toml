@@ -5,6 +5,7 @@ description = "ENA API client"
 authors = [
     { name = "Aleksandar", email = "arjkvc@gmail.com" }
 ]
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.28.1",
