@@ -1,34 +1,66 @@
 name: Testing
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    env:
+      COVERAGE_PYTHON_VERSION: '3.14'
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10']
+        python-version: ['3.13', '3.14']
 
     steps:
-      - uses: actions/checkout@v2
-      - name: 🐍 - Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v7
+
+      - name: 🐍 - Set up uv + Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: 🔧 - Install
-        run: |
-          pip install -r requirements-test.txt
-          pip install -U .
+        run: uv sync --extra dev
 
       - name: 🧪 - Testing
         run: |
-          pytest --reruns 2 --reruns-delay 1 -s -vv
+          if [ "${{ matrix.python-version }}" = "${{ env.COVERAGE_PYTHON_VERSION }}" ]; then
+            uv run pytest --cov --cov-report=xml -s -vv
+          else
+            uv run pytest -s -vv
+          fi
 
-      - name: Codecov
-        uses: codecov/codecov-action@v2
+      - name: 🧪 - Integration Testing
+        run: |
+          if [ "${{ matrix.python-version }}" = "${{ env.COVERAGE_PYTHON_VERSION }}" ]; then
+            uv run pytest -m integration --reruns 2 --reruns-delay 1 --cov --cov-report=xml:coverage-integration.xml -s -vv
+          else
+            uv run pytest -m integration --reruns 2 --reruns-delay 1 -s -vv
+          fi
+
+      - name: 🔍 - Type Checking
+        run: uv run mypy src tests examples
+
+      - name: Codecov - Unit
+        if: matrix.python-version == env.COVERAGE_PYTHON_VERSION
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
+          flags: unit
+          disable_search: true
           fail_ci_if_error: false
 
+      - name: Codecov - Integration
+        if: matrix.python-version == env.COVERAGE_PYTHON_VERSION
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-integration.xml
+          flags: integration
+          disable_search: true
+          fail_ci_if_error: false

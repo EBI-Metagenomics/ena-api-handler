@@ -1,19 +1,21 @@
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.2.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
-  - repo: https://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-      - id: black
-        language: python
-        language_version: python3
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8
+    rev: v0.9.10
     hooks:
       - id: ruff
         args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v2.3.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          [pydantic>=2.12.5, httpx>=0.28.1, pytest>=8, pytest-asyncio>=0.24]
+        pass_filenames: false
+        args: [src, tests, examples]

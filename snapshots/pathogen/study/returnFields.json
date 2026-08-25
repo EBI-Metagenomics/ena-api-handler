@@ -1,0 +1,147 @@
+[
+  {
+    "columnId": "breed",
+    "description": "breed",
+    "type": "text"
+  },
+  {
+    "columnId": "broker_name",
+    "description": "broker name",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "center_name",
+    "description": "Submitting center",
+    "type": "text"
+  },
+  {
+    "columnId": "cultivar",
+    "description": "cultivar (cultivated variety) of plant from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "datahub",
+    "description": "DCC datahub name",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "description",
+    "description": "brief sequence description",
+    "type": "text"
+  },
+  {
+    "columnId": "first_public",
+    "description": "date when made public",
+    "type": "date"
+  },
+  {
+    "columnId": "geo_accession",
+    "description": "GEO accession",
+    "type": "text"
+  },
+  {
+    "columnId": "isolate",
+    "description": "individual isolate from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "keywords",
+    "description": "keywords associated with sequence",
+    "type": "text"
+  },
+  {
+    "columnId": "last_updated",
+    "description": "date when last updated",
+    "type": "date"
+  },
+  {
+    "columnId": "parent_study_accession",
+    "description": "parent study accession",
+    "type": "text"
+  },
+  {
+    "columnId": "project_name",
+    "description": "name of the project within which the sequencing was organized",
+    "type": "text"
+  },
+  {
+    "columnId": "scientific_name",
+    "description": "scientific name of an organism",
+    "type": "text"
+  },
+  {
+    "columnId": "secondary_study_accession",
+    "description": "secondary study accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "secondary_study_alias",
+    "description": "Submitting center",
+    "type": "text"
+  },
+  {
+    "columnId": "secondary_study_center_name",
+    "description": "Submitting center",
+    "type": "text"
+  },
+  {
+    "columnId": "status",
+    "description": "Status",
+    "type": "number"
+  },
+  {
+    "columnId": "strain",
+    "description": "strain from which sample was obtained",
+    "type": "text"
+  },
+  {
+    "columnId": "study_accession",
+    "description": "study accession number",
+    "type": "text"
+  },
+  {
+    "columnId": "study_alias",
+    "description": "submitter's name for the study",
+    "type": "text"
+  },
+  {
+    "columnId": "study_description",
+    "description": "detailed sequencing study description",
+    "type": "text"
+  },
+  {
+    "columnId": "study_name",
+    "description": "sequencing study name",
+    "type": "text"
+  },
+  {
+    "columnId": "study_title",
+    "description": "brief sequencing study description",
+    "type": "text"
+  },
+  {
+    "columnId": "submission_tool",
+    "description": "Submission tool",
+    "type": "text"
+  },
+  {
+    "columnId": "tag",
+    "description": "Classification Tags",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_division",
+    "description": "taxonomic division",
+    "type": "controlled value"
+  },
+  {
+    "columnId": "tax_id",
+    "description": "NCBI taxonomic classification",
+    "type": "taxonomy"
+  },
+  {
+    "columnId": "tax_lineage",
+    "description": "Complete taxonomic lineage for an organism",
+    "type": "text"
+  }
+]
