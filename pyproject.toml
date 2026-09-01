@@ -1,6 +1,6 @@
 [project]
 name = "ena-api-handler"
-version = "3.0.0"
+version = "3.0.1"
 description = "ENA API client"
 authors = [
     { name = "Aleksandar", email = "arjkvc@gmail.com" }
