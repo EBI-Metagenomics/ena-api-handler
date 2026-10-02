@@ -5,6 +5,9 @@ All HTTP calls are mocked — no network required.
 
 from __future__ import annotations
 
+import asyncio
+import json
+import time
 from datetime import date, datetime
 from enum import Enum
 from typing import Any
@@ -121,6 +124,57 @@ def test_sync_search_http_error_raises_client_error() -> None:
 
     with pytest.raises(ENAClientError, match="bad query"):
         client.search(result=_result_type(), query=_Q(), fields=[])
+
+
+def _response(status_code: int, json_data: Any = None, text: str = "") -> MagicMock:
+    resp = MagicMock(spec=httpx.Response)
+    resp.status_code = status_code
+    resp.is_success = 200 <= status_code < 300
+    resp.json.return_value = json_data if json_data is not None else []
+    resp.text = text
+    return resp
+
+
+def _malformed_json_response() -> MagicMock:
+    """A 200 response whose body ENA truncated mid-stream (seen in production)."""
+    resp = _response(200)
+    resp.json.side_effect = json.JSONDecodeError("Expecting ',' delimiter", "[\n{}", 3)
+    resp.text = '[\n{"message": "..."}'
+    return resp
+
+
+def test_sync_search_retries_on_malformed_json_then_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleep_mock = MagicMock()
+    monkeypatch.setattr(time, "sleep", sleep_mock)
+
+    client = ENAClient()
+    mock_http = MagicMock(spec=httpx.Client)
+    mock_http.get.side_effect = [_malformed_json_response(), _response(200, [{}])]
+    client._client = mock_http
+
+    results = client.search(result=_result_type(), query=_Q(), fields=[])
+
+    assert len(results) == 1
+    assert mock_http.get.call_count == 2
+    sleep_mock.assert_called_once()
+
+
+def test_sync_search_raises_client_error_after_exhausting_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(time, "sleep", MagicMock())
+
+    client = ENAClient(retries=3)
+    mock_http = MagicMock(spec=httpx.Client)
+    mock_http.get.side_effect = [_malformed_json_response() for _ in range(3)]
+    client._client = mock_http
+
+    with pytest.raises(ENAClientError, match="read_run"):
+        client.search(result=_result_type(), query=_Q(), fields=[])
+
+    assert mock_http.get.call_count == 3
 
 
 def test_sync_search_post_body_contains_required_fields() -> None:
@@ -398,6 +452,44 @@ async def test_search_async_http_error_raises_client_error() -> None:
 
     with pytest.raises(ENAClientError, match="bad query"):
         await client.search_async(result=_result_type(), query=_Q(), fields=[])
+
+
+async def test_search_async_retries_on_malformed_json_then_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleep_mock = AsyncMock()
+    monkeypatch.setattr(asyncio, "sleep", sleep_mock)
+
+    client = ENAClient()
+    mock_http = MagicMock(spec=httpx.AsyncClient)
+    mock_http.get = AsyncMock(
+        side_effect=[_malformed_json_response(), _response(200, [{}])]
+    )
+    client._async_client = mock_http
+
+    results = await client.search_async(result=_result_type(), query=_Q(), fields=[])
+
+    assert len(results) == 1
+    assert mock_http.get.call_count == 2
+    sleep_mock.assert_awaited_once()
+
+
+async def test_search_async_raises_client_error_after_exhausting_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock())
+
+    client = ENAClient(retries=3)
+    mock_http = MagicMock(spec=httpx.AsyncClient)
+    mock_http.get = AsyncMock(
+        side_effect=[_malformed_json_response() for _ in range(3)]
+    )
+    client._async_client = mock_http
+
+    with pytest.raises(ENAClientError, match="read_run"):
+        await client.search_async(result=_result_type(), query=_Q(), fields=[])
+
+    assert mock_http.get.call_count == 3
 
 
 async def test_search_async_post_body_contains_required_fields() -> None:

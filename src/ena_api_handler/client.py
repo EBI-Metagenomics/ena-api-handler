@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import time
 import warnings
 from datetime import date, datetime
 from enum import Enum
@@ -260,8 +262,7 @@ class ENAClient:
             params = self._build_params(
                 result, query, fields, portal, limit, include_metagenomes
             )
-            resp = self._get_client().get("search", params=params, auth=auth)
-            rows = self._raw_rows(resp, result)
+            rows = self._get_rows_with_retry(params, result, auth)
             if rows:
                 rows = _pre_process(rows, field_aliases, exclude)
                 if result_model is None:
@@ -389,10 +390,7 @@ class ENAClient:
             params = self._build_params(
                 result, query, fields, portal, limit, include_metagenomes
             )
-            resp = await self._get_async_client().get(
-                "search", params=params, auth=auth
-            )
-            rows = self._raw_rows(resp, result)
+            rows = await self._get_rows_with_retry_async(params, result, auth)
             if rows:
                 rows = _pre_process(rows, field_aliases, exclude)
                 if result_model is None:
@@ -447,6 +445,56 @@ class ENAClient:
         if resp.status_code == 204:
             return []
         return resp.json()
+
+    def _get_rows_with_retry(
+        self,
+        params: dict[str, Any],
+        result: Enum,
+        auth: httpx.Auth | None,
+    ) -> list[dict]:
+        """
+        GET + parse, retrying when ENA returns a 200 with a malformed/truncated
+        body (an intermittent upstream condition, not a connection failure, so
+        httpx's transport-level retries don't cover it).
+        """
+        attempts = max(self._retries, 1)
+        last_exc: json.JSONDecodeError | None = None
+        for attempt in range(attempts):
+            resp = self._get_client().get("search", params=params, auth=auth)
+            try:
+                return self._raw_rows(resp, result)
+            except json.JSONDecodeError as exc:
+                last_exc = exc
+                if attempt < attempts - 1:
+                    time.sleep(0.2 * 2**attempt)
+        raise ENAClientError(
+            f"ENA API returned malformed JSON for {result.value} after"
+            f" {attempts} attempts: {last_exc}"
+        )
+
+    async def _get_rows_with_retry_async(
+        self,
+        params: dict[str, Any],
+        result: Enum,
+        auth: httpx.Auth | None,
+    ) -> list[dict]:
+        """Async version of :meth:`_get_rows_with_retry`."""
+        attempts = max(self._retries, 1)
+        last_exc: json.JSONDecodeError | None = None
+        for attempt in range(attempts):
+            resp = await self._get_async_client().get(
+                "search", params=params, auth=auth
+            )
+            try:
+                return self._raw_rows(resp, result)
+            except json.JSONDecodeError as exc:
+                last_exc = exc
+                if attempt < attempts - 1:
+                    await asyncio.sleep(0.2 * 2**attempt)
+        raise ENAClientError(
+            f"ENA API returned malformed JSON for {result.value} after"
+            f" {attempts} attempts: {last_exc}"
+        )
 
     # ── Convenience methods (sync) ─────────────────────────────────────────────
 
